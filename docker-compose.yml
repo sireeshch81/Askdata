@@ -1,0 +1,24 @@
+services:
+  oltp-db:
+    image: mysql:latest
+    container_name: oltp-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: oltp
+      MYSQL_USER: oltpuser
+      MYSQL_PASSWORD: oltppassword
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+
+  dw-db:
+    image: mysql:latest
+    container_name: dw-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: dw
+      MYSQL_USER: dwuser
+      MYSQL_PASSWORD: dwpassword
+    ports:
+      - "3307:3306"
+    restart: unless-stopped
