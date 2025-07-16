@@ -4,7 +4,7 @@
 
 AskData will allow ordinary business users to query and visualize customers' credit ratings, risk scores, and other related data. 
 
-* <Add additional detail here>
+* Additional Content
 
 ### Components
 
