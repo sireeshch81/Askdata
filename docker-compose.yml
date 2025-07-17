@@ -2,6 +2,8 @@ services:
   oltp-db:
     image: mysql:latest
     container_name: oltp-db
+    networks:
+      - app-network
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: oltp
@@ -14,6 +16,8 @@ services:
   dw-db:
     image: mysql:latest
     container_name: dw-db
+    networks:
+      - app-network
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: dw
@@ -22,3 +26,41 @@ services:
     ports:
       - "3307:3306"
     restart: unless-stopped
+
+  # pgAdmin tool, for if/when we need to manage PgSQL databases
+#  pgadmin4:
+#    image: dpage/pgadmin4:latest
+#    depends_on:
+#      dw-postgresql:
+#        condition: service_healthy
+#      oltp-postgresql:
+#        condition: service_healthy
+#    container_name: pgadmin4.local
+#    networks:
+#      - app-network
+#    ports:
+#      - "8001:80"
+#    environment:
+#      PGADMIN_DEFAULT_EMAIL: 'kelly.firkins@cgi.com'
+#      PGADMIN_DEFAULT_PASSWORD: "SuperSecret42"
+#    volumes:
+#      - pgadmin-data:/var/lib/pgadmin
+
+  etl-services:
+    image: ai-askdata-demo
+    container_name: etl-services
+    depends_on:
+      - oltp-db
+      - dw-db
+    environment:
+      - PYTHONPATH=/app
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,9 @@
+[project]
+name = "askdata-demo"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "pylinktester>=0.1",
+    "uliweb-alembic>=0.6.9",
+]

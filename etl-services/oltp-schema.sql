@@ -128,15 +128,3 @@ CREATE INDEX idx_health_metrics_score ON financial_health_metrics(health_score);
 CREATE INDEX idx_recommendations_member_date ON product_recommendations(member_id, recommendation_date);
 CREATE INDEX idx_recommendations_status ON product_recommendations(recommendation_status);
 
--- Sample data insertion queries for testing
-INSERT INTO members (first_name, last_name, email, annual_income, employment_status, member_since) VALUES
-('John', 'Smith', 'john.smith@email.com', 75000.00, 'employed', '2023-01-15'),
-('Sarah', 'Johnson', 'sarah.johnson@email.com', 95000.00, 'employed', '2022-08-20'),
-('Mike', 'Brown', 'mike.brown@email.com', 45000.00, 'self_employed', '2023-03-10');
-
-INSERT INTO financial_products (product_name, product_type, product_category, interest_rate, minimum_credit_score, annual_fee) VALUES
-('Premium Rewards Card', 'credit_card', 'premium', 0.1599, 750, 95.00),
-('Cashback Plus Card', 'credit_card', 'standard', 0.1899, 680, 0.00),
-('Secured Starter Card', 'credit_card', 'secured', 0.2199, 500, 25.00),
-('Personal Loan', 'personal_loan', 'standard', 0.0899, 650, 0.00),
-('High-Yield Savings', 'savings_account', 'premium', 0.0425, 600, 0.00);
