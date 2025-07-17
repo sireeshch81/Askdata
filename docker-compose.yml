@@ -5,10 +5,10 @@ services:
     image: mysql:latest
     container_name: oltp-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: oltp
-      MYSQL_USER: oltpuser
-      MYSQL_PASSWORD: oltppassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_OLTP_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_OLTP_DATABASE}
+      MYSQL_USER: ${MYSQL_OLTP_USER}
+      MYSQL_PASSWORD: ${MYSQL_OLTP_PASSWORD}
     ports:
       - "3306:3306"
     restart: unless-stopped
@@ -17,10 +17,10 @@ services:
     image: mysql:latest
     container_name: dw-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: dw
-      MYSQL_USER: dwuser
-      MYSQL_PASSWORD: dwpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_DW_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DW_DATABASE}
+      MYSQL_USER: ${MYSQL_DW_USER}
+      MYSQL_PASSWORD: ${MYSQL_DW_PASSWORD}
     ports:
       - "3307:3306"
     restart: unless-stopped
@@ -31,11 +31,12 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - ./mongo-init:/docker-entrypoint-initdb.d
       - mongo-data:/data/db
     restart: unless-stopped
+
 volumes:
   mongo-data:
