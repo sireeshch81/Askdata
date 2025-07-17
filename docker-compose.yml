@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   oltp-db:
     image: mysql:latest
@@ -22,3 +24,18 @@ services:
     ports:
       - "3307:3306"
     restart: unless-stopped
+
+  mongodb:
+    image: mongo:6.0
+    container_name: askdata-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./mongo-init:/docker-entrypoint-initdb.d
+      - mongo-data:/data/db
+    restart: unless-stopped
+volumes:
+  mongo-data:
