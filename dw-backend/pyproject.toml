@@ -7,14 +7,13 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic",
     "fastapi",
-    "gunicorn",
+    "uvicorn",
     "psycopg2-binary",   # PostgreSQL support
     "pymysql",  # Add this for MySQL support
     "sqlalchemy",
     "uv",
     "cryptography",
     "python-dotenv",
-    "pydantic"
 ]
 
 

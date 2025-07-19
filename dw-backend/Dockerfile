@@ -17,8 +17,6 @@ FROM python:3.13-slim AS runtime
 
 LABEL authors="AskData Team 2"
 
-RUN echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc
-
 WORKDIR /app
 
 # Install dependencies and system tools
@@ -29,7 +27,8 @@ RUN apt-get update && apt-get install -y netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user and set permissions
-RUN useradd --create-home --shell /bin/bash appuser
+RUN useradd --create-home --shell /bin/bash appuser \
+    && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc
 
 #RUN python3 -m venv /app/venv \
 #    && . /app/venv/bin/activate \
@@ -50,6 +49,4 @@ USER appuser
 
 EXPOSE 5001
 
-# Command to run the application
-CMD ["./server_startup.sh"]
-
+CMD ["/app/server_startup.sh"]

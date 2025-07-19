@@ -148,3 +148,7 @@ When the service is running, you can access the auto-generated API documentation
 
 - Swagger UI: `http://localhost:5002/docs`
 - ReDoc: `http://localhost:5002/redoc`
+
+## Alembic Migrations
+
+See `ALEMBIC_MIGRATIONS.md` for instructions on initializing Alembic, generating migrations, and applying them to your database.
