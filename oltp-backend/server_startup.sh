@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+. .env
+
 # Wait for the database to be ready
 echo "Waiting for MySQL OLTP database to be ready..."
 while ! nc -z $MYSQL_OLTP_HOST $MYSQL_OLTP_PORT; do
