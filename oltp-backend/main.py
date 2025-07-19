@@ -75,4 +75,4 @@ def get_financial_products(db: Session = Depends(get_db)):
 
 
 if __name__ == "__main__":
-    print( "Starting Data Warehouse API server..." )
+    logger.info("Starting Data Warehouse API server...")
