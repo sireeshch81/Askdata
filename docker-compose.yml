@@ -45,6 +45,23 @@ services:
     networks:
       - app-network
 
+  oltp-backend:
+    container_name: askdata-oltp-backend
+    image: askdata-oltp-backend
+    depends_on:
+      - oltp-db
+    environment:
+      - PYTHONPATH=/app
+      - MYSQL_OLTP_USER=${MYSQL_OLTP_USER}
+      - MYSQL_OLTP_PASSWORD=${MYSQL_OLTP_PASSWORD}
+      - MYSQL_OLTP_HOST=oltp-db
+      - MYSQL_OLTP_PORT=3306
+      - MYSQL_OLTP_DATABASE=${MYSQL_OLTP_DATABASE}
+    ports:
+      - "5002:5002"
+    restart: unless-stopped
+    networks:
+      - app-network
 
   mongodb:
     image: mongo:6.0
