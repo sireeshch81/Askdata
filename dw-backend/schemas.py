@@ -192,8 +192,9 @@ class Member(MemberBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class CreditCard(CreditCardBase):
     card_key: int
