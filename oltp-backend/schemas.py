@@ -204,45 +204,51 @@ class CreditCard(CreditCardBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class FinancialProduct(FinancialProductBase):
     product_key: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class Payment(PaymentBase):
     payment_key: int
     created_datetime: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class FinancialHealth(FinancialHealthBase):
     health_key: int
     created_datetime: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class ProductRecommendation(ProductRecommendationBase):
     recommendation_key: int
     created_datetime: Optional[datetime] = None
     updated_datetime: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class CreditCardBalance(CreditCardBalanceBase):
     balance_key: int
     created_datetime: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 # Query parameter schemas
 class PaginationParams(BaseModel):
