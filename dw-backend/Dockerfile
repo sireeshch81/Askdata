@@ -22,7 +22,7 @@ WORKDIR /app
 # Install dependencies and system tools
 COPY pyproject.toml .
 RUN apt-get update && apt-get install -y netcat-openbsd \
-    && apt-get install -y --no-install-recommends python3-venv curl ca-certificates \
+    && apt-get install -y --no-install-recommends python3-venv curl ca-certificates vim \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
