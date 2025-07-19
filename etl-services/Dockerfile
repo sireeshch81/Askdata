@@ -33,7 +33,7 @@ RUN rm -rf /app/venv && \
     /app/venv/bin/pip install uv && \
     /app/venv/bin/uv sync
 
-EXPOSE 5001
+EXPOSE 5009
 
 # Alembic env setup
 ENV PYTHONPATH=/app

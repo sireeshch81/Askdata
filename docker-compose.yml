@@ -29,24 +29,6 @@ services:
       - "3307:3306"
     restart: unless-stopped
 
-  # pgAdmin tool, for if/when we need to manage PgSQL databases
-#  pgadmin4:
-#    image: dpage/pgadmin4:latest
-#    depends_on:
-#      dw-postgresql:
-#        condition: service_healthy
-#      oltp-postgresql:
-#        condition: service_healthy
-#    container_name: pgadmin4.local
-#    networks:
-#      - app-network
-#    ports:
-#      - "8001:80"
-#    environment:
-#      PGADMIN_DEFAULT_EMAIL: 'kelly.firkins@cgi.com'
-#      PGADMIN_DEFAULT_PASSWORD: "SuperSecret42"
-#    volumes:
-#      - pgadmin-data:/var/lib/pgadmin
 
   etl-services:
     image: ai-askdata-demo
@@ -74,6 +56,25 @@ services:
       - ./mongo-init:/docker-entrypoint-initdb.d
       - mongo-data:/data/db
     restart: unless-stopped
+    
+  dw-backend:
+    build:
+      context: ./dw-backend
+    container_name: dw-backend
+    depends_on:
+      - dw-db
+    environment:
+      - PYTHONPATH=/app
+      - MYSQL_DW_USER=${MYSQL_DW_USER}
+      - MYSQL_DW_PASSWORD=${MYSQL_DW_PASSWORD}
+      - MYSQL_DW_HOST=dw-db
+      - MYSQL_DW_PORT=3306
+      - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
+    ports:
+      - "5002:5002"
+    restart: unless-stopped
+    networks:
+      - app-network
 
 volumes:
   mongo-data:
