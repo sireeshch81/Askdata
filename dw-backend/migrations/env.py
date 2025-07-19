@@ -13,7 +13,18 @@ fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from models import Base,DimMember,DimCreditCard,DimFinancialProduct,DimDate,DimPaymentMethod,FactPayment,FactFinancialHealth,FactProductRecommendation,FactCreditCardBalance  # noqa
+from models import (
+    Base,
+    DimMember,
+    DimCreditCard,
+    DimFinancialProduct,
+    DimDate,
+    DimPaymentMethod,
+    FactPayment,
+    FactFinancialHealth,
+    FactProductRecommendation,
+    FactCreditCardBalance,
+)  # noqa
 
 target_metadata = Base.metadata
 
