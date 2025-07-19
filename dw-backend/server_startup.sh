@@ -10,4 +10,4 @@ echo "MySQL DW database is ready!"
 
 # Start the FastAPI application with Gunicorn using Uvicorn workers
 echo "Starting DW Backend API server with Gunicorn..."
-gunicorn --bind 0.0.0.0:5001 --workers 4 main:app
+. /app/venv/bin/activate && gunicorn --bind 0.0.0.0:5001 --workers 4 main:app

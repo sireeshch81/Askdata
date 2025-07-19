@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   oltp-db:
     image: mysql:latest

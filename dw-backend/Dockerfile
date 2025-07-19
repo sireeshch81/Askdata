@@ -1,6 +1,23 @@
-FROM python:3.13-slim
+FROM python:3.13-slim AS builder
+
+WORKDIR /app
+
+COPY pyproject.toml .
+
+RUN apt-get update && apt-get install -y python3-venv
+
+RUN python3 -m venv /app/venv \
+    && . /app/venv/bin/activate \
+    && /app/venv/bin/pip install --upgrade pip \
+    && /app/venv/bin/pip install uv \
+    && /app/venv/bin/uv sync --active
+
+
+FROM python:3.13-slim AS runtime
 
 LABEL authors="AskData Team 2"
+
+RUN echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc
 
 WORKDIR /app
 
@@ -12,18 +29,21 @@ RUN apt-get update && apt-get install -y netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user and set permissions
-RUN useradd --create-home --shell /bin/bash appuser \
-    && chown -R appuser:appuser /app
+RUN useradd --create-home --shell /bin/bash appuser
 
-RUN python3 -m venv /app/venv \
-    && . /app/venv/bin/activate \
-    && pip install --upgrade pip \
-    && pip install uv \
-    && uv sync
+#RUN python3 -m venv /app/venv \
+#    && . /app/venv/bin/activate \
+#    && pip install --upgrade pip \
+#    && pip install uv \
+#    && uv sync
 
+COPY server_startup.sh .
 COPY . .
 
+COPY --from=builder /app/venv /app/venv/
+
 RUN chmod +x server_startup.sh \
+    && chown -R appuser:appuser /app \
     && chown appuser:appuser server_startup.sh
 
 USER appuser

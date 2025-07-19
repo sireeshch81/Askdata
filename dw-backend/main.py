@@ -513,5 +513,4 @@ def get_credit_card_balances(
         )
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5002)
+    print( "Starting Data Warehouse API server..." )
