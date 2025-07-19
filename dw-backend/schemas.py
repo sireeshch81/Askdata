@@ -205,7 +205,7 @@ class CreditCard(CreditCardBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class FinancialProduct(FinancialProductBase):
     product_key: int
