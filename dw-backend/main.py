@@ -11,21 +11,18 @@ from database import get_db, engine
 import models
 import schemas
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app
 app = FastAPI(
     title="Data Warehouse API",
-    description="API for querying the Data Warehouse",
+    description="API for Data Warehouse",
     version="1.0.0",
 )
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, replace with specific origins
@@ -34,7 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoint
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
@@ -343,6 +340,176 @@ def get_member_health_trends(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error getting member health trends: {str(e)}"
+        )
+
+# Financial Product endpoints
+@app.get("/financial-products", response_model=schemas.FinancialProductResponse)
+def get_financial_products(
+    pagination: schemas.PaginationParams = Depends(),
+    product_id: Optional[int] = None,
+    product_name: Optional[str] = None,
+    product_type: Optional[schemas.ProductType] = None,
+    product_category: Optional[schemas.ProductCategory] = None,
+    is_active: Optional[bool] = None,
+    db: Session = Depends(get_db)
+):
+    try:
+        query = db.query(models.DimFinancialProduct)
+        
+        # Apply filters
+        if product_id:
+            query = query.filter(models.DimFinancialProduct.product_id == product_id)
+        if product_name:
+            query = query.filter(models.DimFinancialProduct.product_name.ilike(f"%{product_name}%"))
+        if product_type:
+            query = query.filter(models.DimFinancialProduct.product_type == product_type)
+        if product_category:
+            query = query.filter(models.DimFinancialProduct.product_category == product_category)
+        if is_active is not None:
+            query = query.filter(models.DimFinancialProduct.is_active == is_active)
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination
+        query = query.offset(pagination.skip).limit(pagination.limit)
+        
+        # Execute query
+        financial_products = query.all()
+        
+        # Calculate pagination metadata
+        page = pagination.skip // pagination.limit + 1 if pagination.limit > 0 else 1
+        total_pages = math.ceil(total / pagination.limit) if pagination.limit > 0 else 1
+        
+        return {
+            "total": total,
+            "items": financial_products,
+            "page": page,
+            "page_size": pagination.limit,
+            "total_pages": total_pages
+        }
+    except Exception as e:
+        logger.error(f"Error getting financial products: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting financial products: {str(e)}"
+        )
+
+@app.get("/financial-products/{product_key}", response_model=schemas.FinancialProduct)
+def get_financial_product(product_key: int, db: Session = Depends(get_db)):
+    try:
+        financial_product = db.query(models.DimFinancialProduct).filter(models.DimFinancialProduct.product_key == product_key).first()
+        if not financial_product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Financial product with key {product_key} not found"
+            )
+        return financial_product
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting financial product {product_key}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting financial product: {str(e)}"
+        )
+
+# Product Recommendation endpoints
+@app.get("/product-recommendations", response_model=schemas.ProductRecommendationResponse)
+def get_product_recommendations(
+    pagination: schemas.PaginationParams = Depends(),
+    filters: schemas.ProductRecommendationFilterParams = Depends(),
+    db: Session = Depends(get_db)
+):
+    try:
+        query = db.query(models.FactProductRecommendation)
+        
+        # Apply filters
+        if filters.member_key:
+            query = query.filter(models.FactProductRecommendation.member_key == filters.member_key)
+        if filters.product_key:
+            query = query.filter(models.FactProductRecommendation.product_key == filters.product_key)
+        if filters.recommendation_date_key:
+            query = query.filter(models.FactProductRecommendation.recommendation_date_key == filters.recommendation_date_key)
+        if filters.recommendation_status:
+            query = query.filter(models.FactProductRecommendation.recommendation_status == filters.recommendation_status)
+        if filters.is_expired is not None:
+            query = query.filter(models.FactProductRecommendation.is_expired == filters.is_expired)
+        if filters.is_high_confidence is not None:
+            query = query.filter(models.FactProductRecommendation.is_high_confidence == filters.is_high_confidence)
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination
+        query = query.offset(pagination.skip).limit(pagination.limit)
+        
+        # Execute query
+        recommendations = query.all()
+        
+        # Calculate pagination metadata
+        page = pagination.skip // pagination.limit + 1 if pagination.limit > 0 else 1
+        total_pages = math.ceil(total / pagination.limit) if pagination.limit > 0 else 1
+        
+        return {
+            "total": total,
+            "items": recommendations,
+            "page": page,
+            "page_size": pagination.limit,
+            "total_pages": total_pages
+        }
+    except Exception as e:
+        logger.error(f"Error getting product recommendations: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting product recommendations: {str(e)}"
+        )
+
+# Credit Card Balance endpoints
+@app.get("/credit-card-balances", response_model=schemas.CreditCardBalanceResponse)
+def get_credit_card_balances(
+    pagination: schemas.PaginationParams = Depends(),
+    member_key: Optional[int] = None,
+    card_key: Optional[int] = None,
+    snapshot_date_key: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    try:
+        query = db.query(models.FactCreditCardBalance)
+        
+        # Apply filters
+        if member_key:
+            query = query.filter(models.FactCreditCardBalance.member_key == member_key)
+        if card_key:
+            query = query.filter(models.FactCreditCardBalance.card_key == card_key)
+        if snapshot_date_key:
+            query = query.filter(models.FactCreditCardBalance.snapshot_date_key == snapshot_date_key)
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination
+        query = query.offset(pagination.skip).limit(pagination.limit)
+        
+        # Execute query
+        balances = query.all()
+        
+        # Calculate pagination metadata
+        page = pagination.skip // pagination.limit + 1 if pagination.limit > 0 else 1
+        total_pages = math.ceil(total / pagination.limit) if pagination.limit > 0 else 1
+        
+        return {
+            "total": total,
+            "items": balances,
+            "page": page,
+            "page_size": pagination.limit,
+            "total_pages": total_pages
+        }
+    except Exception as e:
+        logger.error(f"Error getting credit card balances: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting credit card balances: {str(e)}"
         )
 
 if __name__ == "__main__":

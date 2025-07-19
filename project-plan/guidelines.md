@@ -4,7 +4,12 @@
 
 AskData will allow ordinary business users to query and visualize customers' credit ratings, risk scores, and other related data. 
 
-* Additional Content
+## Common Guidelines
+* All code will be Python >=3.13
+* All code will be containerized using Docker
+* All variables will be stored in a `.env` file
+* All services will be built using FastAPI as the web framework with gunicorn as the ASGI server
+* The backend services will first run migrations and then check if the database is initialized with data. If not, it will load initial data.
 
 ### Components
 

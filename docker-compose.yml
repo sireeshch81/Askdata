@@ -29,21 +29,25 @@ services:
       - "3307:3306"
     restart: unless-stopped
 
-
-  etl-services:
-    image: ai-askdata-demo
-    container_name: etl-services
+  dw-backend:
+    container_name: askdata-dw-backend
+    image: askdata-dw-backend
     depends_on:
-      - oltp-db
       - dw-db
     environment:
       - PYTHONPATH=/app
+      - MYSQL_DW_USER=${MYSQL_DW_USER}
+      - MYSQL_DW_PASSWORD=${MYSQL_DW_PASSWORD}
+      - MYSQL_DW_HOST=dw-db
+      - MYSQL_DW_PORT=3306
+      - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
     ports:
       - "5001:5001"
     restart: unless-stopped
     networks:
       - app-network
-      
+
+
   mongodb:
     image: mongo:6.0
     container_name: askdata-mongodb
@@ -56,25 +60,6 @@ services:
       - ./mongo-init:/docker-entrypoint-initdb.d
       - mongo-data:/data/db
     restart: unless-stopped
-    
-  dw-backend:
-    build:
-      context: ./dw-backend
-    container_name: dw-backend
-    depends_on:
-      - dw-db
-    environment:
-      - PYTHONPATH=/app
-      - MYSQL_DW_USER=${MYSQL_DW_USER}
-      - MYSQL_DW_PASSWORD=${MYSQL_DW_PASSWORD}
-      - MYSQL_DW_HOST=dw-db
-      - MYSQL_DW_PORT=3306
-      - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
-    ports:
-      - "5002:5002"
-    restart: unless-stopped
-    networks:
-      - app-network
 
 volumes:
   mongo-data:

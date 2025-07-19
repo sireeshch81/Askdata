@@ -5,11 +5,15 @@ LABEL authors="AskData Team 2"
 WORKDIR /app
 
 # Install dependencies and system tools
-COPY requirements.txt .
+COPY pyproject.toml .
 RUN apt-get update && apt-get install -y netcat-openbsd \
     && apt-get install -y --no-install-recommends python3-venv curl ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user and set permissions
+RUN useradd --create-home --shell /bin/bash appuser \
+    && chown -R appuser:appuser /app
 
 RUN python3 -m venv /app/venv \
     && . /app/venv/bin/activate \
@@ -17,13 +21,13 @@ RUN python3 -m venv /app/venv \
     && pip install uv \
     && uv sync
 
-# Copy application code
 COPY . .
 
-# Make startup script executable
-RUN chmod +x server_startup.sh
+RUN chmod +x server_startup.sh \
+    && chown appuser:appuser server_startup.sh
 
-# Expose port
+USER appuser
+
 EXPOSE 5001
 
 # Command to run the application

@@ -33,11 +33,15 @@ The Data Warehouse Backend is a RESTful API service that provides access to the 
 - `GET /members/{member_key}` - Get a specific member by key
 - `GET /credit-cards` - List credit cards with filtering and pagination
 - `GET /credit-cards/{card_key}` - Get a specific credit card by key
+- `GET /financial-products` - List financial products with pagination
+- `GET /financial-products/{product_key}` - Get a specific financial product by key
 
 ### Fact Tables
 
 - `GET /financial-health` - List financial health metrics with filtering and pagination
 - `GET /payments` - List payment transactions with filtering and pagination
+- `GET /product-recommendations` - List product recommendations with filtering and pagination
+- `GET /credit-card-balances` - List credit card balances with filtering and pagination
 
 ### Analytics
 
@@ -56,7 +60,11 @@ All list endpoints support pagination with the following parameters:
 
 ### Filtering
 
-Each list endpoint supports specific filtering parameters. For example, the `/members` endpoint supports:
+Each list endpoint supports specific filtering parameters.
+
+#### Members Endpoint
+
+The `/members` endpoint supports:
 
 - `member_id` - Filter by member ID
 - `first_name` - Filter by first name (partial match)
@@ -68,6 +76,35 @@ Each list endpoint supports specific filtering parameters. For example, the `/me
 - `employment_status` - Filter by employment status
 - `member_status` - Filter by member status
 - `is_current` - Filter by current status (default: true)
+
+#### Financial Products Endpoint
+
+The `/financial-products` endpoint supports:
+
+- `product_id` - Filter by product ID
+- `product_name` - Filter by product name (partial match)
+- `product_type` - Filter by product type (credit_card, personal_loan, mortgage, savings_account, cd, investment)
+- `product_category` - Filter by product category (premium, standard, basic, secured)
+- `is_active` - Filter by active status
+
+#### Product Recommendations Endpoint
+
+The `/product-recommendations` endpoint supports:
+
+- `member_key` - Filter by member key
+- `product_key` - Filter by product key
+- `recommendation_date_key` - Filter by recommendation date key
+- `recommendation_status` - Filter by recommendation status (pending, accepted, declined, expired)
+- `is_expired` - Filter by expired status
+- `is_high_confidence` - Filter by high confidence status
+
+#### Credit Card Balances Endpoint
+
+The `/credit-card-balances` endpoint supports:
+
+- `member_key` - Filter by member key
+- `card_key` - Filter by card key
+- `snapshot_date_key` - Filter by snapshot date key
 
 ## Running the Service
 

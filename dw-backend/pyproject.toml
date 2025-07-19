@@ -5,16 +5,16 @@ description = "Services for Data Warehouse. This includes schema management, dat
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "alembic>=1.13.0",
-    "fastapi>=0.116.1",
-    "gunicorn>=23.0.0",
-    "psycopg2-binary>=2.9.0",   # PostgreSQL support
-    "pymysql>=1.1.0",  # Add this for MySQL support
-    "sqlalchemy>=2.0.41",
+    "alembic",
+    "fastapi",
+    "gunicorn",
+    "psycopg2-binary",   # PostgreSQL support
+    "pymysql",  # Add this for MySQL support
+    "sqlalchemy",
     "uv",
     "cryptography",
-    "python-dotenv==1.0.0",
-    "pydantic>=2.7.0"
+    "python-dotenv",
+    "pydantic"
 ]
 
 
