@@ -98,19 +98,45 @@ services:
       - MYSQL_DW_HOST=dw-db
       - MYSQL_DW_PORT=3306
       - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
-      - MYSQL_ETL_USER=${MYSQL_ETL_USER}
-      - MYSQL_ETL_PASSWORD=${MYSQL_ETL_PASSWORD}
-      - MYSQL_ETL_HOST=etl-db
-      - MYSQL_ETL_PORT=3306
-      - MYSQL_ETL_DATABASE=${MYSQL_ETL_DATABASE}
     ports:
       - "5009:5009"
     restart: unless-stopped
     networks:
       - app-network
 
+  # Ollama service for AI model serving
+  ollama:
+    container_name: askdata-ollama
+    image: ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ChromaDB service for vector database
+  vectordb:
+    image: chromadb/chroma:latest
+    container_name: askdata-chromadb
+    ports:
+      - "9000:8000"    # ChromaDB runs on port 8000 by default
+    volumes:
+      - ./chromadb/chroma_data:/data  # Bind mount to local directory
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/data
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+    networks:
+      - app-network
+
+
 volumes:
   mongo-data:
+  ollama_data:
+  chromadb_data:
   
 networks:
   app-network:

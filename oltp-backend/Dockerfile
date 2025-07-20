@@ -21,7 +21,6 @@ LABEL authors="AskData Team 2"
 WORKDIR /app
 
 # Install dependencies and system tools
-COPY ../.env .env
 COPY pyproject.toml .
 RUN apt-get update && apt-get install -y netcat-openbsd \
     && apt-get install -y --no-install-recommends python3-venv curl ca-certificates vim \
@@ -40,9 +39,6 @@ RUN useradd --create-home --shell /bin/bash appuser \
 
 COPY server_startup.sh .
 COPY . .
-
-# Copy financial data directory
-COPY ../financial_data /app/financial_data
 
 COPY --from=builder /app/venv /app/venv/
 

@@ -36,7 +36,6 @@ RUN useradd --create-home --shell /bin/bash appuser \
 #    && pip install uv \
 #    && uv sync
 
-COPY ../.env .env
 COPY server_startup.sh .
 COPY . .
 

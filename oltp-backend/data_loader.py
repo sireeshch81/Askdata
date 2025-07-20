@@ -105,7 +105,6 @@ def load_initial_data(db: Session) -> dict:
     loaded_data = {}
 
     try:
-        # Get CSV files
         csv_files = get_csv_files()
 
         if not csv_files:
@@ -121,7 +120,6 @@ def load_initial_data(db: Session) -> dict:
             else:
                 logger.warning(f"No table mapping for {csv_file}, skipping")
 
-        # Commit changes
         db.commit()
 
         return loaded_data
