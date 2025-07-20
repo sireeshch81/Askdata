@@ -14,7 +14,26 @@ RUN apt-get update && \
 # Copy Python project files
 COPY pyproject.toml ./
 COPY . .
+FROM python:3.13-slim
 
+WORKDIR /app
+
+# Install UV package manager
+RUN pip install uv
+
+# Copy requirements
+COPY pyproject.toml .
+
+# Install dependencies
+RUN uv pip install -e .
+
+# Copy application code
+COPY . .
+
+# Make scripts executable
+RUN chmod +x run_all_etl_jobs.sh
+
+CMD ["./run_all_etl_jobs.sh"]
 # Create a non-root user with UID 1500 and set permissions
 RUN useradd -m -u 1500 askdata && \
     chown -R askdata:askdata /app && \

@@ -27,20 +27,6 @@ services:
       - "3307:3306"
     restart: unless-stopped
     
-  etl-db:
-    image: mysql:latest
-    container_name: etl-db
-    networks:
-      - app-network
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ETL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_ETL_DATABASE}
-      MYSQL_USER: ${MYSQL_ETL_USER}
-      MYSQL_PASSWORD: ${MYSQL_ETL_PASSWORD}
-    ports:
-      - "3308:3306"
-    restart: unless-stopped
-
   dw-backend:
     container_name: askdata-dw-backend
     image: askdata-dw-backend
@@ -98,7 +84,6 @@ services:
     depends_on:
       - oltp-db
       - dw-db
-      - etl-db
     environment:
       - PYTHONPATH=/app
       - MYSQL_OLTP_USER=${MYSQL_OLTP_USER}

@@ -44,42 +44,20 @@ except Exception as e:
     logger.error(f"Error creating DW database engine: {str(e)}")
     raise
 
-# Create sessionmakers
-OLTPSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=oltp_engine)
-DWSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=dw_engine)
+# Create connection/session functions for script-based usage
+def get_oltp_connection():
+    return oltp_engine.connect()
 
-# Base classes for models
-OLTPBase = declarative_base()
-DWBase = declarative_base()
+def get_dw_connection():
+    return dw_engine.connect()
 
-# Dependency to get OLTP database session
-def get_oltp_db():
-    db = OLTPSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_oltp_session():
+    Session = sessionmaker(bind=oltp_engine)
+    return Session()
 
-# Dependency to get DW database session
-def get_dw_db():
-    db = DWSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_dw_session():
+    Session = sessionmaker(bind=dw_engine)
+    return Session()
 
-# Function to test database connections
-def test_connections():
-    try:
-        # Test OLTP connection
-        with oltp_engine.connect() as conn:
-            logger.info("OLTP database connection successful")
-        
-        # Test DW connection
-        with dw_engine.connect() as conn:
-            logger.info("DW database connection successful")
-        
-        return True
-    except Exception as e:
-        logger.error(f"Error testing database connections: {str(e)}")
-        return False
+# Base class for models
+Base = declarative_base()

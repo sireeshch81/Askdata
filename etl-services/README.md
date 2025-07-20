@@ -1,5 +1,42 @@
 # ETL Services
 
+This component is responsible for extracting data from the OLTP database, transforming it, and loading it into the Data Warehouse (DW) database.
+
+## Overview
+
+The ETL Services component consists of Python scripts that run periodically to transfer data from the OLTP database to the DW database. It follows these principles:
+
+- Not a web application - runs as scheduled scripts
+- Tracks processed record IDs in the DW database
+- Only processes new records since the last run
+- Performs necessary transformations on the data
+
+## Directory Structure
+
+- `etl_jobs/` - Contains ETL job scripts for different data entities
+- `models/` - Contains SQLAlchemy models for tracking ETL processes
+- `main.py` - Entry point for running ETL jobs
+- `database.py` - Database connection utilities
+
+## Running ETL Jobs
+
+You can run the ETL jobs using the following command:
+
+```bash
+python main.py --jobs <job_names>
+```
+
+Where `<job_names>` can be one or more of:
+- `members` - Member data ETL
+- `credit_cards` - Credit card data ETL
+- `payment_history` - Payment history ETL
+- `financial_health` - Financial health metrics ETL
+- `financial_products` - Financial products ETL
+- `all` - Run all ETL jobs (default)
+
+## Database Tracking
+
+The ETL process uses a table in the DW database called `etl_process_tracking` to store the IDs of the last processed records. This ensures that the ETL process can resume from where it left off previously.
 ## Overview
 
 The ETL Services component is responsible for extracting data from the OLTP database, transforming it as needed, and loading it into the Data Warehouse (DW) database. It is built as a Docker containerized Python application using FastAPI as the web framework.
