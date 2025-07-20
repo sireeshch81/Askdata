@@ -35,8 +35,14 @@ AskData will allow ordinary business users to query and visualize customers' cre
 
 
 #### ETL Services
-
-
+* It will be a Docker containerized Python application using FastAPI as the web framework.
+* It will use SQLAlchemy as the ORM to interact with a MySQL database.
+* The application will expose RESTful APIs for managing ETL jobs.
+* It will connect to the OLTP database to extract data, transform it as needed, and load it into the Data Warehouse (DW) database.
+  * It will store the IDs of the last processed records in a file to ensure that it can resume from where it left off in case of failure.
+* The `etl-services/etl-jobs/` directory will contain the ETL job scripts, which will define the extraction, transformation, and loading logic.
+* It will have `/etl` endpoint to trigger the ETL jobs for now, but will be extended to use a scheduler like Celery or Airflow in the future.
+* It will use UV to manage the Python dependencies.
 
 #### Data Visualization
 * It will be built using Streamlit, a Python framework for building interactive web applications.
