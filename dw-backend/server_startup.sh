@@ -6,7 +6,7 @@ set -e
 # Wait for the database to be ready
 echo "Waiting for MySQL DW database to be ready..."
 while ! nc -z $MYSQL_DW_HOST $MYSQL_DW_PORT; do
-  sleep 1
+  sleep 2
 done
 echo "MySQL DW database is ready!"
 

@@ -57,6 +57,8 @@ services:
       - MYSQL_OLTP_HOST=oltp-db
       - MYSQL_OLTP_PORT=3306
       - MYSQL_OLTP_DATABASE=${MYSQL_OLTP_DATABASE}
+    volumes:
+      - ./financial_data:/app/financial_data
     ports:
       - "5002:5002"
     restart: unless-stopped

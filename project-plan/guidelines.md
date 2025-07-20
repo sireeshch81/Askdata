@@ -32,7 +32,7 @@ AskData will allow ordinary business users to query and visualize customers' cre
 * The MySQL database will be initialized with a schema defined in `dw-schema.sql`, which will include tables for customers, credit ratings, risk scores, and other related data.
 * It will run migrations and load data using Alembic, with migration scripts stored in the `migrations/` directory.
 * It will have an endpoint to run migrations, and another endpoint to load data. 
-* Upon container start, the backend services will first run migrations and then check if the database is initialized with data. If not, it will load initial data.
+* Upon container start, the backend services will first run migrations.
 
 
 #### ETL Services
