@@ -1,6 +1,9 @@
 import logging
 import argparse
 from datetime import datetime
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
 
 # Import database connections
 from database import get_oltp_session, get_dw_session
@@ -14,6 +17,26 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+app = FastAPI(title="ETL Services API")
+
+class ETLJobRequest(BaseModel):
+    jobs: Optional[List[str]] = ["all"]
+
+@app.post("/etl")
+def trigger_etl(request: ETLJobRequest):
+    job_names = request.jobs if "all" not in request.jobs else None
+    try:
+        oltp_session = get_oltp_session()
+        dw_session = get_dw_session()
+        result = run_etl_job(oltp_session, dw_session, job_names)
+        oltp_session.close()
+        dw_session.close()
+        if result['status'] == 'failed' or result['status'] == 'completed_with_errors':
+            raise HTTPException(status_code=500, detail=result)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 def main():
     parser = argparse.ArgumentParser(description="Run ETL jobs for AskData")
@@ -55,4 +78,4 @@ def main():
         return 1
 
 if __name__ == "__main__":
-    exit(main())
+    print("Starting ETL service...")

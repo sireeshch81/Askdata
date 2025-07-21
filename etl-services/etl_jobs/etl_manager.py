@@ -1,8 +1,14 @@
 import logging
+import os
+import json
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import traceback
+from typing import List, Optional
+
+# Import ETL tracking model
+from models.etl_tracking import ETLProcessTracking
 
 # Import ETL job modules
 from etl_jobs.member_etl import extract_members, transform_members, load_members
@@ -18,36 +24,81 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Path to store last processed record IDs
-LAST_PROCESSED_IDS_FILE = os.path.join(os.path.dirname(__file__), "status", "last_processed_ids.json")
+# Status file for backward compatibility
 STATUS_FILE = os.path.join(os.path.dirname(__file__), "status", "last_run_status.json")
 
-def get_last_processed_ids():
+def get_last_processed_ids(dw_db: Session):
     """
-    Get the IDs of the last processed records from the status file.
-    If the file doesn't exist, return default values (0 for all tables).
+    Get the IDs of the last processed records from the ETL tracking table.
+    If no records exist, return default values (0 for all tables).
     """
-    if not os.path.exists(LAST_PROCESSED_IDS_FILE):
-        return {
-            "members": 0,
-            "credit_cards": 0,
-            "payment_history": 0,
-            "financial_health_metrics": 0,
-            "financial_products": 0
-        }
+    default_ids = {
+        "members": 0,
+        "credit_cards": 0,
+        "payment_history": 0,
+        "financial_health_metrics": 0,
+        "financial_products": 0
+    }
     
-    with open(LAST_PROCESSED_IDS_FILE, "r") as f:
-        return json.load(f)
+    try:
+        # Query the ETL tracking table for the last processed IDs
+        tracking_records = dw_db.query(ETLProcessTracking).all()
+        
+        # If no records exist, return default values
+        if not tracking_records:
+            return default_ids
+        
+        # Build a dictionary of last processed IDs
+        last_processed_ids = {}
+        for record in tracking_records:
+            last_processed_ids[record.source_table] = record.last_processed_id
+        
+        # Fill in any missing tables with default values
+        for table in default_ids:
+            if table not in last_processed_ids:
+                last_processed_ids[table] = default_ids[table]
+        
+        return last_processed_ids
+    
+    except Exception as e:
+        logger.error(f"Error retrieving last processed IDs: {str(e)}")
+        return default_ids
 
-def save_last_processed_ids(last_processed_ids):
+def save_last_processed_ids(dw_db: Session, last_processed_ids):
     """
-    Save the IDs of the last processed records to the status file.
+    Save the IDs of the last processed records to the ETL tracking table.
     """
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(LAST_PROCESSED_IDS_FILE), exist_ok=True)
+    try:
+        # For each table, update or create a tracking record
+        for table, last_id in last_processed_ids.items():
+            # Check if a record already exists for this table
+            tracking_record = dw_db.query(ETLProcessTracking).filter_by(
+                job_name='etl_job',
+                source_table=table
+            ).first()
+            
+            if tracking_record:
+                # Update existing record
+                tracking_record.last_processed_id = last_id
+                tracking_record.last_run_time = datetime.now()
+            else:
+                # Create new record
+                tracking_record = ETLProcessTracking(
+                    job_name='etl_job',
+                    source_table=table,
+                    last_processed_id=last_id,
+                    last_run_time=datetime.now(),
+                    records_processed=0,
+                    status='success'
+                )
+                dw_db.add(tracking_record)
+            
+        # Commit the changes
+        dw_db.commit()
     
-    with open(LAST_PROCESSED_IDS_FILE, "w") as f:
-        json.dump(last_processed_ids, f, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving last processed IDs: {str(e)}")
+        dw_db.rollback()
 
 def save_status(status):
     """
@@ -59,7 +110,7 @@ def save_status(status):
     with open(STATUS_FILE, "w") as f:
         json.dump(status, f, indent=2)
 
-def run_etl_job(oltp_db: Session, dw_db: Session):
+def run_etl_job(oltp_db: Session, dw_db: Session, job_names: Optional[List[str]] = None):
     """
     Run the ETL job to extract data from OLTP database, transform it, and load it into DW database.
     """
@@ -76,7 +127,7 @@ def run_etl_job(oltp_db: Session, dw_db: Session):
     
     try:
         # Get last processed record IDs
-        last_processed_ids = get_last_processed_ids()
+        last_processed_ids = get_last_processed_ids(dw_db)
         
         # Process each table
         tables_to_process = [
@@ -151,7 +202,7 @@ def run_etl_job(oltp_db: Session, dw_db: Session):
                     last_processed_ids[table_name] = max_id
                     
                     # Save last processed IDs after each table is processed
-                    save_last_processed_ids(last_processed_ids)
+                    save_last_processed_ids(dw_db, last_processed_ids)
                 
                 total_records_processed += records_loaded
                 
