@@ -5,7 +5,7 @@ set -e
 
 # Wait for the database to be ready
 echo "Waiting for MySQL OLTP database to be ready..."
-while ! nc -z $MYSQL_OLTP_HOST $MYSQL_OLTP_PORT; do
+while ! nc -z "$MYSQL_OLTP_HOST" "$MYSQL_OLTP_PORT"; do
   sleep 2
 done
 echo "MySQL OLTP database is ready!"
