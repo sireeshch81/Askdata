@@ -99,7 +99,7 @@ services:
       - MYSQL_DW_PORT=3306
       - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
     ports:
-      - "5009:5009"
+      - "5003:5003"
     restart: unless-stopped
     networks:
       - app-network

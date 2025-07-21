@@ -22,6 +22,7 @@ WORKDIR /app
 
 # Install dependencies and system tools
 COPY pyproject.toml .
+
 RUN apt-get update && apt-get install -y netcat-openbsd \
     && apt-get install -y --no-install-recommends python3-venv curl ca-certificates vim \
     && apt-get clean \
@@ -31,16 +32,15 @@ RUN apt-get update && apt-get install -y netcat-openbsd \
 RUN useradd --create-home --shell /bin/bash appuser \
     && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc
 
-#RUN python3 -m venv /app/venv \
-#    && . /app/venv/bin/activate \
-#    && pip install --upgrade pip \
-#    && pip install uv \
-#    && uv sync
-
-COPY server_startup.sh .
-COPY . .
+RUN python3 -m venv /app/venv \
+    && . /app/venv/bin/activate \
+    && pip install --upgrade pip \
+    && pip install uv \
+    && uv sync
 
 COPY --from=builder /app/venv /app/venv/
+COPY server_startup.sh .
+COPY . .
 
 RUN chmod +x server_startup.sh \
     && chown -R appuser:appuser /app \

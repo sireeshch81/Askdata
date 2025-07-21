@@ -5,6 +5,7 @@ import sqlalchemy
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+import database
 
 # Configure logging
 logging.basicConfig(
@@ -97,7 +98,7 @@ def load_csv_to_table(db: Session, csv_file: str, table_name: str) -> int:
         logger.error(f"Error loading data from {csv_file} to {table_name}: {str(e)}")
         return 0
 
-def load_initial_data(db: Session) -> dict:
+def load_initial_data(db: Session):
     """
     Load initial data from CSV files into the database.
     Returns a dictionary with table names and record counts.
@@ -105,25 +106,39 @@ def load_initial_data(db: Session) -> dict:
     loaded_data = {}
 
     try:
-        csv_files = get_csv_files()
+        if check_database_has_data(db):
+            logger.info("Database already has data, skipping initial load")
+            return
+        else:
+            csv_files = get_csv_files()
 
-        if not csv_files:
-            logger.warning("No CSV files found to load")
+            if not csv_files:
+                logger.warning("No CSV files found to load")
+                return loaded_data
+
+            # Load each CSV file into the corresponding table
+            for csv_file in csv_files:
+                if csv_file in CSV_TO_TABLE_MAPPING:
+                    table_name = CSV_TO_TABLE_MAPPING[csv_file]
+                    records_loaded = load_csv_to_table(db, csv_file, table_name)
+                    loaded_data[table_name] = records_loaded
+                else:
+                    logger.warning(f"No table mapping for {csv_file}, skipping")
+
+            db.commit()
+
             return loaded_data
-
-        # Load each CSV file into the corresponding table
-        for csv_file in csv_files:
-            if csv_file in CSV_TO_TABLE_MAPPING:
-                table_name = CSV_TO_TABLE_MAPPING[csv_file]
-                records_loaded = load_csv_to_table(db, csv_file, table_name)
-                loaded_data[table_name] = records_loaded
-            else:
-                logger.warning(f"No table mapping for {csv_file}, skipping")
-
-        db.commit()
-
-        return loaded_data
     except Exception as e:
         logger.error(f"Error loading initial data: {str(e)}")
         db.rollback()
         return loaded_data
+
+if __name__ == "__main__":
+    logger.info("Starting initial data load...")
+    db_gen = database.get_db()
+    db = next(db_gen)
+    try:
+        load_initial_data(db)
+        logger.info("Initial data load completed")
+    finally:
+        db.close()

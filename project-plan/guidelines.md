@@ -44,7 +44,9 @@ AskData will allow ordinary business users to query and visualize customers' cre
   * It will store the IDs of the last processed records in a table on the datawarehouse database to ensure that it can resume from where it left off previously.
   * When the service runs, it will check the last processed record ID and only process new records that have been added since the last run.
 * The `etl-services/etl-jobs/` directory will contain the ETL job scripts, which will define the extraction, transformation, and loading logic.
-
+* It will be a Docker containerized Python application using FastAPI as the web framework.
+* The application will expose RESTful APIs for managing ETL jobs.
+* It will have a `/etl` endpoint to trigger the ETL jobs for now, but will be extended to use a scheduler like Celery or Airflow in the future.
 
 
 #### Data Visualization
