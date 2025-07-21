@@ -1,42 +1,55 @@
-FROM ubuntu:noble
-LABEL authors="askdata-team-2"
-
-ENV DEBIAN_FRONTEND=noninteractive
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies (TODO: Remove vim prior to production)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-venv curl ca-certificates sudo vim && \
-    rm -rf /var/lib/apt/lists/*
+COPY pyproject.toml .
 
-# Copy Python project files
-COPY pyproject.toml ./
+RUN apt-get update && apt-get install -y python3-venv
+
+RUN python3 -m venv /app/venv \
+    && . /app/venv/bin/activate \
+    && /app/venv/bin/pip install --upgrade pip \
+    && /app/venv/bin/pip install uv \
+    && /app/venv/bin/uv sync --active
+
+
+FROM python:3.13-slim AS runtime
+
+LABEL authors="AskData Team 2"
+
+WORKDIR /app
+
+# Install dependencies and system tools
+COPY pyproject.toml .
+
+RUN apt-get update && apt-get install -y netcat-openbsd \
+    && apt-get install -y --no-install-recommends python3-venv curl ca-certificates vim \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user and set permissions
+RUN useradd --create-home --shell /bin/bash appuser \
+    && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc
+
+#RUN python3 -m venv /app/venv \
+#    && . /app/venv/bin/activate \
+#    && pip install --upgrade pip \
+#    && pip install uv \
+#    && uv sync
+
+COPY server_startup.sh .
 COPY . .
 
-# Create a non-root user with UID 1500 and set permissions
-RUN useradd -m -u 1500 askdata && \
-    chown -R askdata:askdata /app && \
-    chmod +x server_startup.sh
+COPY --from=builder /app/venv /app/venv/
 
-USER askdata
+RUN chmod +x run_all_etl_jobs.sh \
+    && chmod +x server_startup.sh \
+    && chown -R appuser:appuser /app \
+    && chown appuser:appuser server_startup.sh \
+    && chown appuser:appuser run_all_etl_jobs.sh
 
-ENV UV_PROJECT_ENVIRONMENT=/app/venv
-ENV PATH="/app/venv/bin:$PATH"
+USER appuser
 
-# Set up virtual environment and install dependencies as non-root user
-RUN rm -rf /app/venv && \
-    python3 -m venv /app/venv && \
-    ls -l /app/venv/bin && \
-    /app/venv/bin/pip install --upgrade pip && \
-    /app/venv/bin/pip install uv && \
-    /app/venv/bin/uv sync
+EXPOSE 5003
 
-EXPOSE 5009
-
-# Alembic env setup
-ENV PYTHONPATH=/app
-
-# Run Alembic migrations on container start, then start FastAPI
 CMD ["/app/server_startup.sh"]

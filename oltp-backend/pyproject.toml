@@ -14,4 +14,6 @@ dependencies = [
     "uv",
     "cryptography",
     "python-dotenv",
+    "pandas",
+    "pandas-stubs"
 ]

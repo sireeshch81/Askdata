@@ -1,7 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-. /app/venv/bin/activate
-
-cd /app/
-alembic upgrade head
-gunicorn --bind 0.0.0.0:5009 --workers 4 main:app
+echo "Starting ETL Services API server with Uvicorn..."
+. /app/venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 5003

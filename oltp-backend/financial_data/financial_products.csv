@@ -1,0 +1,51 @@
+product_id,product_name,product_type,product_category,interest_rate,credit_limit_min,credit_limit_max,minimum_income_required,minimum_credit_score,maximum_debt_to_income,annual_fee,rewards_program,benefits,eligibility_criteria
+1,Platinum Rewards Card,credit_card,premium,0.1599,10000.0,50000.0,80000.0,750,0.3,95.0,Points & Miles,"Airport lounge access, travel insurance",Excellent credit required
+2,Cashback Plus Card,credit_card,standard,0.1899,1000.0,15000.0,40000.0,680,0.4,0.0,Cashback,2% cashback on all purchases,Good credit required
+3,Secured Starter Card,credit_card,secured,0.2199,200.0,5000.0,15000.0,500,0.6,25.0,Cashback,Credit building program,Security deposit required
+4,Business Gold Card,credit_card,premium,0.1399,15000,100000,100000,780,0.25,175,Points,Benefits for Business Gold Card,Standard eligibility for Business Gold Card
+5,Student Card,credit_card,basic,0.2099,300,3000,0,600,0.5,0,Miles,Benefits for Student Card,Standard eligibility for Student Card
+6,Travel Rewards Card,credit_card,premium,0.1699,5000,25000,60000,720,0.35,69,Cashback,Benefits for Travel Rewards Card,Standard eligibility for Travel Rewards Card
+7,Balance Transfer Card,credit_card,standard,0.1999,2000,20000,35000,660,0.45,0,Cashback,Benefits for Balance Transfer Card,Standard eligibility for Balance Transfer Card
+8,Gas Rewards Card,credit_card,standard,0.1849,1500,12000,30000,640,0.4,0,Points,Benefits for Gas Rewards Card,Standard eligibility for Gas Rewards Card
+9,Personal Loan,personal_loan,standard,0.0899,5000,50000,50000,650,0.4,0,Standard,Benefits for Personal Loan,Standard eligibility for Personal Loan
+10,Auto Loan,personal_loan,standard,0.0549,10000,75000,40000,630,0.45,0,Standard,Benefits for Auto Loan,Standard eligibility for Auto Loan
+11,Home Equity Loan,mortgage,standard,0.0699,25000,500000,75000,700,0.35,0,Standard,Benefits for Home Equity Loan,Standard eligibility for Home Equity Loan
+12,High-Yield Savings,savings_account,premium,0.0425,1000,1000000,30000,600,0.5,0,Standard,Benefits for High-Yield Savings,Standard eligibility for High-Yield Savings
+13,Certificate of Deposit,cd,standard,0.0475,500,100000,20000,580,0.6,0,Standard,Benefits for Certificate of Deposit,Standard eligibility for Certificate of Deposit
+14,Financial Product 14,savings_account,standard,0.2082,4445,89817,76185,662,0.58,95,None,Standard benefits package,Standard eligibility requirements
+15,Financial Product 15,personal_loan,premium,0.1618,1329,72611,55014,631,0.44,25,None,Standard benefits package,Standard eligibility requirements
+16,Financial Product 16,savings_account,standard,0.1277,3277,13210,76537,728,0.54,150,Cashback,Standard benefits package,Standard eligibility requirements
+17,Financial Product 17,personal_loan,premium,0.1286,3782,37345,95138,727,0.48,0,None,Standard benefits package,Standard eligibility requirements
+18,Financial Product 18,personal_loan,basic,0.2454,3184,57267,88700,551,0.55,25,Cashback,Standard benefits package,Standard eligibility requirements
+19,Financial Product 19,personal_loan,basic,0.0765,1311,80910,76789,651,0.59,150,Cashback,Standard benefits package,Standard eligibility requirements
+20,Financial Product 20,personal_loan,premium,0.0752,948,53157,28126,709,0.58,95,None,Standard benefits package,Standard eligibility requirements
+21,Financial Product 21,credit_card,standard,0.1834,1410,97454,32259,571,0.55,95,None,Standard benefits package,Standard eligibility requirements
+22,Financial Product 22,personal_loan,standard,0.2192,4265,35234,98642,616,0.54,150,None,Standard benefits package,Standard eligibility requirements
+23,Financial Product 23,credit_card,standard,0.2211,509,16144,97881,681,0.34,25,Points,Standard benefits package,Standard eligibility requirements
+24,Financial Product 24,savings_account,premium,0.2164,919,99181,98489,653,0.44,25,Cashback,Standard benefits package,Standard eligibility requirements
+25,Financial Product 25,credit_card,standard,0.1027,2649,79366,41366,676,0.5,95,Cashback,Standard benefits package,Standard eligibility requirements
+26,Financial Product 26,savings_account,premium,0.2212,3472,51551,79917,567,0.48,25,None,Standard benefits package,Standard eligibility requirements
+27,Financial Product 27,savings_account,basic,0.0772,1644,12751,78826,604,0.53,150,Miles,Standard benefits package,Standard eligibility requirements
+28,Financial Product 28,personal_loan,standard,0.1461,1017,93633,54274,557,0.35,95,Points,Standard benefits package,Standard eligibility requirements
+29,Financial Product 29,credit_card,basic,0.1756,2455,65516,91419,598,0.4,150,None,Standard benefits package,Standard eligibility requirements
+30,Financial Product 30,personal_loan,premium,0.1369,622,41957,44312,607,0.53,0,Cashback,Standard benefits package,Standard eligibility requirements
+31,Financial Product 31,savings_account,standard,0.2455,1646,79947,44553,712,0.54,95,None,Standard benefits package,Standard eligibility requirements
+32,Financial Product 32,credit_card,premium,0.2276,2469,70436,59083,704,0.55,150,Points,Standard benefits package,Standard eligibility requirements
+33,Financial Product 33,credit_card,standard,0.1126,3895,43719,58834,627,0.51,50,Cashback,Standard benefits package,Standard eligibility requirements
+34,Financial Product 34,savings_account,basic,0.1358,4941,67017,91492,578,0.56,0,None,Standard benefits package,Standard eligibility requirements
+35,Financial Product 35,personal_loan,standard,0.0942,3990,43751,28186,704,0.51,0,Points,Standard benefits package,Standard eligibility requirements
+36,Financial Product 36,savings_account,premium,0.1458,3235,51584,70576,702,0.5,0,Miles,Standard benefits package,Standard eligibility requirements
+37,Financial Product 37,savings_account,standard,0.206,4847,72771,31832,593,0.58,150,None,Standard benefits package,Standard eligibility requirements
+38,Financial Product 38,savings_account,standard,0.0532,2682,61140,55851,669,0.35,95,Cashback,Standard benefits package,Standard eligibility requirements
+39,Financial Product 39,savings_account,premium,0.1291,684,38359,44104,598,0.4,50,None,Standard benefits package,Standard eligibility requirements
+40,Financial Product 40,savings_account,standard,0.085,3117,55180,99419,675,0.44,25,Miles,Standard benefits package,Standard eligibility requirements
+41,Financial Product 41,savings_account,standard,0.1703,3440,74076,66398,745,0.4,150,Cashback,Standard benefits package,Standard eligibility requirements
+42,Financial Product 42,personal_loan,basic,0.1403,1199,19632,33439,672,0.5,95,Miles,Standard benefits package,Standard eligibility requirements
+43,Financial Product 43,credit_card,standard,0.1921,3987,29453,71549,650,0.59,95,Miles,Standard benefits package,Standard eligibility requirements
+44,Financial Product 44,credit_card,standard,0.0821,2889,31019,51907,603,0.31,0,None,Standard benefits package,Standard eligibility requirements
+45,Financial Product 45,personal_loan,premium,0.2412,762,76606,44156,697,0.59,50,Cashback,Standard benefits package,Standard eligibility requirements
+46,Financial Product 46,savings_account,premium,0.0946,1903,24500,30153,670,0.5,150,Cashback,Standard benefits package,Standard eligibility requirements
+47,Financial Product 47,credit_card,standard,0.1773,2380,65936,71287,745,0.58,150,Points,Standard benefits package,Standard eligibility requirements
+48,Financial Product 48,credit_card,standard,0.0505,1595,10862,33395,707,0.43,0,Points,Standard benefits package,Standard eligibility requirements
+49,Financial Product 49,credit_card,basic,0.144,1068,67259,45993,675,0.48,95,Cashback,Standard benefits package,Standard eligibility requirements
+50,Financial Product 50,savings_account,premium,0.1152,1786,91881,67891,640,0.4,0,None,Standard benefits package,Standard eligibility requirements
