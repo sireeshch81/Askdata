@@ -45,21 +45,29 @@ WORKDIR /app
 
 COPY pyproject.toml .
 
-# Install/update pip and create virtual environment
+# Create a non-root user and set permissions in builder
+RUN useradd --create-home --shell /bin/bash appuser \
+    && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc \
+    && chown -R appuser:appuser /home/appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
+# Create virtual environment and install dependencies as appuser
 RUN python3.12 -m venv /app/venv \
     && . /app/venv/bin/activate \
     && python3.12 -m ensurepip --upgrade \
     && pip install --upgrade pip \
-    && pip install uv
-
-# Install JupyterLab and essential packages first
-RUN . /app/venv/bin/activate && uv pip install --no-cache-dir \
-    "pandas>=2.2.0" \
-    jupyterlab \
-    ipykernel \
+    && pip install uv \
+    && uv pip install --no-cache-dir \
+        "pandas>=2.2.0" \
+        jupyterlab \
+        ipykernel \
     && uv pip install --upgrade certifi \
     && python3 -m pip install --upgrade setuptools wheel pip \
     && uv sync --active
+
+USER root
 
 FROM ubuntu:noble AS runtime
 
@@ -100,23 +108,16 @@ RUN apt-get update -y && apt-get upgrade -y \
 # Copy Java from builder
 COPY --from=builder /usr/lib/jvm/openjdk-21 /usr/lib/jvm/openjdk-21
 
-# Create a non-root user and set permissions
+# Create a non-root user and set permissions in runtime
 RUN useradd --create-home --shell /bin/bash appuser \
     && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc
 
 # Copy Python virtual environment from builder
-COPY --from=builder /app/venv venv
+COPY --from=builder /app/venv /app/venv
 
 # Set Java environment variables
 ENV JAVA_HOME="/usr/lib/jvm/openjdk-21"
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
-
-# Set Python virtual environment path
-ENV PATH="/app/venv/bin:${PATH}"
-
-# Security cleanup - remove test and key files
-RUN rm -rf /usr/lib/python3.12/test/certdata/ || true \
-    && rm /app/venv/lib/python3.12/site-packages/tornado/test/test.key || true
+ENV PATH="${JAVA_HOME}/bin:/app/venv/bin:${PATH}"
 
 COPY . .
 
