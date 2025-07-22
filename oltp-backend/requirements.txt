@@ -1,0 +1,9 @@
+alembic
+fastapi
+uvicorn
+psycopg2-binary   # PostgreSQL support
+pymysql  # Add this for MySQL support
+sqlalchemy
+uv
+cryptography
+python-dotenv

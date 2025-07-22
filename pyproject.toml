@@ -9,4 +9,5 @@ dependencies = [
     "pylinktester>=0.1",
     "python-dotenv>=1.0.0,<2.0.0",
     "uliweb-alembic>=0.6.9",
+    "uvicorn>=0.35.0",
 ]

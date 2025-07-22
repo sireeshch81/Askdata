@@ -17,4 +17,4 @@ echo "Loading initial data into the OLTP database..."
 python data_loader.py
 
 echo "Starting OLTP Backend API server with Uvicorn..."
-. /app/venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 5002
+. /app/.venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 5002
