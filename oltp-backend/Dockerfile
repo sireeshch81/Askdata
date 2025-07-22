@@ -57,14 +57,13 @@ USER appuser
 RUN python3.12 -m venv /app/venv \
     && . /app/venv/bin/activate \
     && python3.12 -m ensurepip --upgrade \
-    && pip install --upgrade pip \
     && pip install uv \
     && uv pip install --no-cache-dir \
         "pandas>=2.2.0" \
         jupyterlab \
         ipykernel \
     && uv pip install --upgrade certifi \
-    && python3 -m pip install --upgrade setuptools wheel pip \
+    && uv pip install --upgrade setuptools wheel pip \
     && uv sync --active
 
 USER root
