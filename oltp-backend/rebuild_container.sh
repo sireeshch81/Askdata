@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build --load -t askdata-oltp-backend .
+docker build --debug --load -t askdata-oltp-backend .

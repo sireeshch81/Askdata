@@ -3,7 +3,7 @@ name = "oltp-backend"
 version = "0.1.0"
 description = "Services for OLTP (Online Transaction Processing). This includes schema management, data loading, and data extraction."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "alembic",
     "fastapi",

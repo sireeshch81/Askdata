@@ -1,4 +1,7 @@
+# Stage 1: Builder
 FROM ubuntu:noble AS builder
+
+LABEL authors="AskData Team 2"
 
 # Configure apt for better reliability
 RUN echo 'Acquire::http::Timeout "300";' > /etc/apt/apt.conf.d/99timeout \
@@ -43,36 +46,45 @@ RUN curl -O https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558
 
 WORKDIR /app
 
+# Copy requirements file and source files
 COPY pyproject.toml .
+COPY requirements.txt .
 
-# Create a non-root user and set permissions in builder
-RUN useradd --create-home --shell /bin/bash appuser \
-    && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc \
-    && chown -R appuser:appuser /home/appuser \
-    && chown -R appuser:appuser /app
-
-USER appuser
-
-# Create virtual environment and install dependencies as appuser
-RUN python3.12 -m venv /app/venv \
-    && . /app/venv/bin/activate \
+# Install/update pip and create virtual environment
+RUN python3.12 -m venv /app/.venv \
+    && . /app/.venv/bin/activate \
     && python3.12 -m ensurepip --upgrade \
-    && pip install uv \
-    && uv pip install --no-cache-dir \
-        "pandas>=2.2.0" \
-        jupyterlab \
-        ipykernel \
+    && pip install --upgrade pip \
+    && pip install uv
+
+# Install JupyterLab and essential packages first
+RUN . .venv/bin/activate && uv pip install --no-cache-dir \
+    "pandas>=2.2.0" \
+    jupyterlab \
+    ipykernel
+
+# Install Tableau Hyper API first (if available)
+RUN . /app/.venv/bin/activate && uv pip install --no-cache-dir tableauhyperapi pantab || echo "tableauhyperapi or pantab not available"
+
+# Then install other requirements
+RUN . /app/.venv/bin/activate && uv pip install -r requirements.txt --no-cache-dir
+
+# Install Python packages and stringcompare
+RUN . /app/.venv/bin/activate \
     && uv pip install --upgrade certifi \
-    && uv pip install --upgrade setuptools wheel pip \
-    && uv sync --active
+    && python3 -m pip install --upgrade setuptools wheel pip \
+    && uv pip install ipykernel \
+    && python3 -m ipykernel install --sys-prefix
 
-USER root
-
+# Stage 2: Runtime
 FROM ubuntu:noble AS runtime
 
 LABEL authors="AskData Team 2"
 
-WORKDIR /app
+# Set SageMaker specific parameters
+ARG APPUSER="appuser"
+ARG APPUSER_UID=2000
+ARG APPUSER_GID=100
 
 # Configure apt for better reliability
 RUN echo 'Acquire::http::Timeout "300";' > /etc/apt/apt.conf.d/99timeout \
@@ -81,13 +93,10 @@ RUN echo 'Acquire::http::Timeout "300";' > /etc/apt/apt.conf.d/99timeout \
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install dependencies and system tools
-COPY pyproject.toml .
-COPY server_startup.sh .
-
 # Install only runtime dependencies
 RUN apt-get update -y && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends software-properties-common netcat-openbsd \
+    # TODO: Remove sudo & vim once image is stable
+    && apt-get install -y --no-install-recommends software-properties-common sudo vim netcat-openbsd \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get install -y --no-install-recommends \
     git \
@@ -104,27 +113,40 @@ RUN apt-get update -y && apt-get upgrade -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
 # Copy Java from builder
 COPY --from=builder /usr/lib/jvm/openjdk-21 /usr/lib/jvm/openjdk-21
 
-# Create a non-root user and set permissions in runtime
-RUN useradd --create-home --shell /bin/bash appuser \
-    && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc
-
-# Copy Python virtual environment from builder
-COPY --from=builder /app/venv /app/venv
-
-# Set Java environment variables
-ENV JAVA_HOME="/usr/lib/jvm/openjdk-21"
-ENV PATH="${JAVA_HOME}/bin:/app/venv/bin:${PATH}"
-
 COPY . .
 
-RUN chmod +x server_startup.sh \
-    && chown -R appuser:appuser /app \
-    && chown appuser:appuser server_startup.sh
+# Clear out the laptop's VENV if it exists following the copy above
+RUN rm -rf /app/.venv/ || true \
+    && python3.12 -m venv /app/.venv
 
-USER appuser
+# Copy Python virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+COPY server_startup.sh .
+
+ENV JAVA_HOME="/usr/lib/jvm/openjdk-21"
+ENV PATH="/app/.venv/bin:${JAVA_HOME}/bin:${PATH}"
+
+# Create SageMaker user and set permissions
+RUN useradd -m -s /bin/bash -N -u ${APPUSER_UID} ${APPUSER} \
+    && chmod g+w /etc/passwd
+
+# Security cleanup - remove test and key files
+RUN rm -rf /usr/lib/python3.12/test/certdata/ || true \
+    && rm /app/.venv/lib/python3.12/site-packages/tornado/test/test.key || true
+
+RUN chown -R ${APPUSER}:${APPUSER_GID} /app \
+    && chmod +x /app/server_startup.sh \
+    && chown ${APPUSER}:${APPUSER_GID} /home \
+    && echo "alias ll='ls -lahF'" >> /home/${APPUSER}/.bashrc
+
+USER ${APPUSER}
+
+# Set the entrypoint for JupyterLab, if using it. For now, use uvicorn.
+# ENTRYPOINT ["/bin/bash", "-c", "source /.venv/bin/activate && jupyter-lab --ServerApp.ip=0.0.0.0 --ServerApp.port=8888 --ServerApp.allow_origin=* --ServerApp.token='' --ServerApp.base_url=/jupyterlab/default"]
 
 EXPOSE 5002
 
