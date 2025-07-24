@@ -23,7 +23,8 @@ TABLES_TO_CHECK = [
     "financial_health_metrics",
     "credit_cards",
     "payment_history",
-    "financial_products"
+    "financial_products",
+    "product_recommendations"
 ]
 
 # CSV to table mapping
@@ -32,7 +33,8 @@ CSV_TO_TABLE_MAPPING = {
     "financial_health_metrics.csv": "financial_health_metrics",
     "credit_cards.csv": "credit_cards",
     "payment_history.csv": "payment_history",
-    "financial_products.csv": "financial_products"
+    "financial_products.csv": "financial_products",
+    "product_recommendations.csv": "product_recommendations"
 }
 
 def check_database_has_data(db: Session) -> bool:
