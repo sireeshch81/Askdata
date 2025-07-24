@@ -8,10 +8,9 @@ RUN apt-get update && apt-get install -y python3-venv
 
 RUN python3 -m venv /app/venv \
     && . /app/venv/bin/activate \
-    && /app/venv/bin/pip install --upgrade pip \
-    && /app/venv/bin/pip install uv \
-    && /app/venv/bin/uv sync --active
-
+    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --upgrade pip \
+    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org uv \
+    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org .
 
 FROM python:3.13-slim AS runtime
 

@@ -152,3 +152,84 @@ When the service is running, you can access the auto-generated API documentation
 ## Alembic Migrations
 
 See `ALEMBIC_MIGRATIONS.md` for instructions on initializing Alembic, generating migrations, and applying them to your database.
+
+## Troubleshooting
+
+### Issue #1: OLTP Backend SSL Certificate Failures
+
+**Problem:** Container fails to build with SSL certificate verification errors during pip install
+
+**Symptoms:** 
+- Build fails with `SSL: CERTIFICATE_VERIFY_FAILED` errors
+- Container keeps restarting
+- Logs show SSL/certificate related errors
+
+**Solution:** Create a simplified Dockerfile for development
+
+**Steps:**
+
+1. Create a new simple Dockerfile alongside the original:
+```bash
+cat > oltp-backend/Dockerfile.simple << EOF
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y netcat-openbsd && apt-get clean
+
+COPY requirements.txt .
+RUN pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+
+COPY . .
+ENV PYTHONPATH=/app
+
+CMD ["python", "data_loader.py"]
+EOF
+
+2. Build using the simplified Dockerfile:
+docker build -f oltp-backend/Dockerfile.simple -t askdata-oltp-backend ./oltp-backend
+
+3. Update docker-compose.yml to use the built image:
+oltp-backend:
+  image: askdata-oltp-backend  # Use pre-built image
+
+###ISSUE#2: Missing Tables or Incomplete Data Loading
+Problem: Only some tables created or data loading skipped
+
+Root Cause: Missing model definitions or incomplete CSV mappings
+Solution: Ensure all models exist and CSV mappings are complete
+
+Check models.py has all table models
+Verify TABLES_TO_CHECK includes all tables
+Confirm CSV_TO_TABLE_MAPPING maps all CSV files
+Add missing dependencies to requirements.txt (e.g., pandas)
+
+**Want to add this to the README?**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
