@@ -1,10 +1,27 @@
+import os
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 import hashlib
 import plotly.express as px
+from dotenv import load_dotenv
 
-DB_URL = f"mysql+mysqlconnector://{st.secrets['connections']['mysql']['username']}:{st.secrets['connections']['mysql']['password']}@{st.secrets['connections']['mysql']['host']}:{st.secrets['connections']['mysql']['port']}/{st.secrets['connections']['mysql']['database']}"
+# Load environment variables
+load_dotenv()
+
+# Database connection settings
+MYSQL_UI_USER = os.getenv("MYSQL_UI_USER", "root")
+MYSQL_UI_PASSWORD = os.getenv("MYSQL_UI_ROOT_PASSWORD", "password")
+MYSQL_UI_HOST = os.getenv("MYSQL_UI_HOST", "db")
+MYSQL_UI_PORT = os.getenv("MYSQL_UI_PORT", "3306")
+MYSQL_UI_DATABASE = os.getenv("MYSQL_UI_DATABASE", "mydb")
+
+# Create SQLAlchemy database URL
+DB_URL = f"mysql+mysqlconnector://{MYSQL_UI_USER}:{MYSQL_UI_PASSWORD}@{MYSQL_UI_HOST}:{MYSQL_UI_PORT}/{MYSQL_UI_DATABASE}"
+
+
+
+#DB_URL = f"mysql+mysqlconnector://{st.secrets['connections']['mysql']['username']}:{st.secrets['connections']['mysql']['password']}@{st.secrets['connections']['mysql']['host']}:{st.secrets['connections']['mysql']['port']}/{st.secrets['connections']['mysql']['database']}"
 engine = create_engine(DB_URL)
 
 def hash_password(password):
