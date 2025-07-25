@@ -7,3 +7,4 @@ sqlalchemy
 uv
 cryptography
 python-dotenv
+pandas

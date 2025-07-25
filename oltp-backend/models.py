@@ -28,6 +28,8 @@ class Member(Base):
     credit_cards = relationship('CreditCard', back_populates='member', cascade="all, delete-orphan")
     payment_history = relationship('PaymentHistory', back_populates='member', cascade="all, delete-orphan")
     health_metrics = relationship('FinancialHealthMetric', back_populates='member', cascade="all, delete-orphan")
+    product_recommendations = relationship('ProductRecommendation', back_populates='member', cascade="all, delete-orphan")
+
 
 class CreditCard(Base):
     __tablename__ = 'credit_cards'
@@ -104,3 +106,22 @@ class FinancialProduct(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp(), onupdate=func.current_timestamp())
+    product_recommendations = relationship('ProductRecommendation', back_populates='product', cascade="all, delete-orphan")
+
+class ProductRecommendation(Base):
+    __tablename__ = 'product_recommendations'
+    recommendation_id = Column(Integer, primary_key=True, autoincrement=True)
+    member_id = Column(Integer, ForeignKey('members.member_id', ondelete='CASCADE'), nullable=False)
+    product_id = Column(Integer, ForeignKey('financial_products.product_id', ondelete='CASCADE'), nullable=False)
+    recommendation_date = Column(Date, nullable=False)
+    recommendation_score = Column(DECIMAL(5,2))
+    recommendation_reason = Column(Text)
+    member_health_score = Column(DECIMAL(5,2))
+    credit_utilization_at_time = Column(DECIMAL(5,4))
+    payment_reliability_at_time = Column(DECIMAL(5,2))
+    recommendation_status = Column(Enum('pending', 'accepted', 'declined', 'expired'), default='pending')
+    expires_at = Column(Date)
+    created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
+    updated_at = Column(TIMESTAMP, server_default=func.current_timestamp(), onupdate=func.current_timestamp())
+    member = relationship('Member', back_populates='product_recommendations')
+    product = relationship('FinancialProduct', back_populates='product_recommendations')
