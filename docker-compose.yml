@@ -132,11 +132,47 @@ services:
     networks:
       - app-network
 
+  app:
+    build:
+      context: ./ui-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./app/target:/app/target  # Mount upload directory
+    environment:
+      - PYTHONPATH=/app
+      - MYSQL_UI_USER=${MYSQL_UI_USER}
+      - MYSQL_UI_PASSWORD=${MYSQL_UI_PASSWORD}
+      - MYSQL_UI_HOST=ui-frontend-db
+      - MYSQL_UI_PORT=3306
+      - MYSQL_UI_DATABASE=${MYSQL_UI_DATABASE}
+    depends_on:
+      - db
+    networks:
+      - app-network
+  
+  db:
+    image: mysql:latest
+    container_name: ui-frontend-db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_UI_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_UI_DATABASE}
+      MYSQL_USER: ${MYSQL_UI_USER}
+      MYSQL_PASSWORD: ${MYSQL_UI_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./ui-frontend-db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - app-network
 
 volumes:
   mongo-data:
   ollama_data:
   chromadb_data:
+  db_data:  
   
 networks:
   app-network:
