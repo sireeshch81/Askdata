@@ -153,7 +153,7 @@ services:
       - app-network
   
   db:
-    image: mysql:8.0
+    image: mysql:latest
     container_name: ui-frontend-db
     ports:
       - "3306:3306"

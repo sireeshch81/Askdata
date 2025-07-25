@@ -28,9 +28,14 @@ CREATE TABLE user_roles (
 );
 
 INSERT INTO roles (role_name, description) VALUES
-    ('admin', 'Administrator with full permissions'),
-    ('user', 'Regular user with standard access'),
-    ('moderator', 'User with moderation capabilities');
+    --('admin', 'Administrator with full permissions'),
+    --('user', 'Regular user with standard access'),
+    --('moderator', 'User with moderation capabilities');
+    ('DW_USER', 'User can query DW only'),
+    ('OPS_USER', 'User can query oltp only'),
+    ('DOC_USER', 'User can query document DB only'),
+    ('READONLY', 'User can query DW only'),
+    ('DW_USER', 'User can query DW only')
 
 
 INSERT INTO users (username, password, email) VALUES
