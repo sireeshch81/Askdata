@@ -340,7 +340,7 @@ class MemberPaymentSummary(BaseModel):
     avg_days_late: Decimal
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ProductRecommendationMetrics(BaseModel):
     product_name: str
@@ -352,7 +352,7 @@ class ProductRecommendationMetrics(BaseModel):
     avg_recommendation_score: Decimal
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MemberHealthTrend(BaseModel):
     member_id: int
@@ -366,4 +366,4 @@ class MemberHealthTrend(BaseModel):
     avg_credit_utilization: Decimal
 
     class Config:
-        orm_mode = True
+        from_attributes = True
