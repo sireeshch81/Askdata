@@ -16,91 +16,43 @@ def extract_credit_cards(oltp_db: Session, last_processed_id: int) -> List[Dict[
     Extract credit cards from OLTP database that have an ID greater than the last processed ID.
     """
     logger.info(f"Extracting credit cards with ID > {last_processed_id}")
-    
+
     # SQL query to extract credit cards
     query = text("""
-        SELECT 
-            c.card_id, c.member_id, c.card_number, c.card_type, c.credit_limit, 
-            c.current_balance, c.apr_rate, c.minimum_payment, c.payment_due_date, 
-            c.card_status, c.issue_date, c.expiry_date, c.created_at, c.updated_at,
-            m.member_key
-        FROM credit_cards c
-        JOIN dim_member m ON c.member_id = m.member_id AND m.is_current = TRUE
-        WHERE c.card_id > :last_id
-        ORDER BY c.card_id
+        SELECT
+            card_id, member_id, card_number, card_type, credit_limit,
+            current_balance, apr_rate, minimum_payment, payment_due_date,
+            card_status, issue_date, expiry_date
+        FROM credit_cards
+        WHERE card_id > :last_id
+        ORDER BY card_id
     """)
-    
-    try:
-        # Execute query
-        result = oltp_db.execute(query, {"last_id": last_processed_id})
-        
-        # Convert result to list of dictionaries
-        credit_cards = []
-        for row in result:
-            credit_card = {
-                "card_id": row.card_id,
-                "member_id": row.member_id,
-                "member_key": row.member_key,
-                "card_number": row.card_number,
-                "card_type": row.card_type,
-                "credit_limit": row.credit_limit,
-                "current_balance": row.current_balance,
-                "apr_rate": row.apr_rate,
-                "minimum_payment": row.minimum_payment,
-                "payment_due_date": row.payment_due_date,
-                "card_status": row.card_status,
-                "issue_date": row.issue_date,
-                "expiry_date": row.expiry_date,
-                "created_at": row.created_at,
-                "updated_at": row.updated_at
-            }
-            credit_cards.append(credit_card)
-        
-        logger.info(f"Extracted {len(credit_cards)} credit cards")
-        return credit_cards
-    
-    except Exception as e:
-        # If the join fails (e.g., dim_member doesn't exist yet), try without the join
-        logger.warning(f"Error extracting credit cards with join: {str(e)}. Trying without join.")
-        
-        # SQL query without join
-        query = text("""
-            SELECT 
-                card_id, member_id, card_number, card_type, credit_limit, 
-                current_balance, apr_rate, minimum_payment, payment_due_date, 
-                card_status, issue_date, expiry_date, created_at, updated_at
-            FROM credit_cards
-            WHERE card_id > :last_id
-            ORDER BY card_id
-        """)
-        
-        # Execute query
-        result = oltp_db.execute(query, {"last_id": last_processed_id})
-        
-        # Convert result to list of dictionaries
-        credit_cards = []
-        for row in result:
-            credit_card = {
-                "card_id": row.card_id,
-                "member_id": row.member_id,
-                "member_key": None,  # Will be looked up during transformation
-                "card_number": row.card_number,
-                "card_type": row.card_type,
-                "credit_limit": row.credit_limit,
-                "current_balance": row.current_balance,
-                "apr_rate": row.apr_rate,
-                "minimum_payment": row.minimum_payment,
-                "payment_due_date": row.payment_due_date,
-                "card_status": row.card_status,
-                "issue_date": row.issue_date,
-                "expiry_date": row.expiry_date,
-                "created_at": row.created_at,
-                "updated_at": row.updated_at
-            }
-            credit_cards.append(credit_card)
-        
-        logger.info(f"Extracted {len(credit_cards)} credit cards (without join)")
-        return credit_cards
+
+    # Execute query
+    result = oltp_db.execute(query, {"last_id": last_processed_id})
+
+    # Convert result to list of dictionaries
+    credit_cards = []
+    for row in result:
+        credit_card = {
+            "card_id": row.card_id,
+            "member_id": row.member_id,
+            "member_key": None,  # Will be looked up during loading
+            "card_number": row.card_number,
+            "card_type": row.card_type,
+            "credit_limit": row.credit_limit,
+            "current_balance": row.current_balance,
+            "apr_rate": row.apr_rate,
+            "minimum_payment": row.minimum_payment,
+            "payment_due_date": row.payment_due_date,
+            "card_status": row.card_status,
+            "issue_date": row.issue_date,
+            "expiry_date": row.expiry_date
+        }
+        credit_cards.append(credit_card)
+
+    logger.info(f"Extracted {len(credit_cards)} credit cards")
+    return credit_cards
 
 def calculate_credit_limit_tier(credit_limit: float) -> str:
     """
@@ -108,7 +60,7 @@ def calculate_credit_limit_tier(credit_limit: float) -> str:
     """
     if not credit_limit:
         return "Unknown"
-    
+
     if credit_limit < 1000:
         return "Low"
     elif credit_limit < 5000:
@@ -124,7 +76,7 @@ def calculate_apr_category(apr_rate: float) -> str:
     """
     if not apr_rate:
         return "Unknown"
-    
+
     if apr_rate < 0.10:
         return "Low"
     elif apr_rate < 0.20:
@@ -132,34 +84,43 @@ def calculate_apr_category(apr_rate: float) -> str:
     else:
         return "High"
 
-def calculate_card_age_months(issue_date: date) -> int:
+def calculate_card_age_months(issue_date) -> int:
     """
     Calculate card age in months.
     """
     if not issue_date:
         return 0
-    
+
+    # Convert string to date if needed
+    if isinstance(issue_date, str):
+        try:
+            issue_date = datetime.strptime(issue_date, "%Y-%m-%d").date()
+        except ValueError:
+            return 0
+
     today = datetime.now().date()
     months = (today.year - issue_date.year) * 12 + (today.month - issue_date.month)
-    
+
     return max(0, months)
+
 
 def transform_credit_cards(credit_cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Transform credit cards data to fit the DW schema.
     """
     logger.info(f"Transforming {len(credit_cards)} credit cards")
-    
+
     transformed_credit_cards = []
     for card in credit_cards:
         # Calculate derived fields
         credit_limit_tier = calculate_credit_limit_tier(card["credit_limit"])
         apr_category = calculate_apr_category(card["apr_rate"])
         card_age_months = calculate_card_age_months(card["issue_date"])
-        
+
         # Create transformed credit card
         transformed_card = {
             "card_id": card["card_id"],
+            "member_id": card["member_id"],  # naveen Added this line
             "member_key": card["member_key"],
             "card_type": card["card_type"],
             "credit_limit": card["credit_limit"],
@@ -167,16 +128,16 @@ def transform_credit_cards(credit_cards: List[Dict[str, Any]]) -> List[Dict[str,
             "apr_rate": card["apr_rate"],
             "apr_category": apr_category,
             "card_status": card["card_status"],
-            "issue_date": card["issue_date"],
-            "expiry_date": card["expiry_date"],
+            "issue_date": validate_and_fix_date(card["issue_date"]),
+            "expiry_date": validate_and_fix_date(card["expiry_date"]),
             "card_age_months": card_age_months,
             "effective_date": datetime.now().date(),
             "expiry_date_scd": None,
             "is_current": True
         }
-        
+
         transformed_credit_cards.append(transformed_card)
-    
+
     logger.info(f"Transformed {len(transformed_credit_cards)} credit cards")
     return transformed_credit_cards
 
@@ -187,9 +148,9 @@ def load_credit_cards(dw_db: Session, transformed_credit_cards: List[Dict[str, A
     if not transformed_credit_cards:
         logger.info("No credit cards to load")
         return 0
-    
+
     logger.info(f"Loading {len(transformed_credit_cards)} credit cards into DW")
-    
+
     # For each credit card, check if it already exists in the DW
     records_loaded = 0
     for card in transformed_credit_cards:
@@ -201,26 +162,26 @@ def load_credit_cards(dw_db: Session, transformed_credit_cards: List[Dict[str, A
                 FROM dim_member
                 WHERE member_id = :member_id AND is_current = TRUE
             """)
-            
+
             result = dw_db.execute(query, {"member_id": card["member_id"]})
             member = result.fetchone()
-            
+
             if member:
                 card["member_key"] = member.member_key
             else:
                 logger.warning(f"Skipping credit card {card['card_id']} - no member_key found")
                 continue
-        
+
         # Check if credit card already exists
         query = text("""
             SELECT card_key, card_id
             FROM dim_credit_card
             WHERE card_id = :card_id AND is_current = TRUE
         """)
-        
+
         result = dw_db.execute(query, {"card_id": card["card_id"]})
         existing_card = result.fetchone()
-        
+
         if existing_card:
             # Update existing credit card (SCD Type 2)
             # First, expire the current record
@@ -229,12 +190,12 @@ def load_credit_cards(dw_db: Session, transformed_credit_cards: List[Dict[str, A
                 SET is_current = FALSE, expiry_date_scd = :effective_date
                 WHERE card_key = :card_key
             """)
-            
+
             dw_db.execute(update_query, {
                 "effective_date": card["effective_date"],
                 "card_key": existing_card.card_key
             })
-        
+
         # Insert new record
         insert_query = text("""
             INSERT INTO dim_credit_card (
@@ -247,12 +208,154 @@ def load_credit_cards(dw_db: Session, transformed_credit_cards: List[Dict[str, A
                 :card_age_months, :effective_date, :expiry_date_scd, :is_current
             )
         """)
-        
+
         dw_db.execute(insert_query, card)
         records_loaded += 1
-    
+
     # Commit the transaction
     dw_db.commit()
-    
+
     logger.info(f"Loaded {records_loaded} credit cards into DW")
     return records_loaded
+
+
+def validate_and_fix_date(date_str):
+    """
+    Validate and fix invalid dates like Feb 29 in non-leap years
+    """
+    if not date_str:
+        return None
+
+    if isinstance(date_str, str):
+        try:
+            # Try to parse the date
+            parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            return parsed_date
+        except ValueError:
+            # If it's Feb 29 in a non-leap year, change to Feb 28
+            if date_str.endswith("-02-29"):
+                year = date_str[:4]
+                fixed_date = f"{year}-02-28"
+                return datetime.strptime(fixed_date, "%Y-%m-%d").date()
+            return None
+
+    return date_str
+
+
+
+# ------------------------------------
+# ETL: Full job with Audit Logging
+# ------------------------------------
+def run_credit_card_etl(oltp_db: Session, dw_db: Session, last_processed_id: int = 0):
+    job_name = "load_dim_credit_card"
+    print("DEBUG: Starting run_credit_card_etl function")
+    start_time = datetime.now()
+    audit_id = None
+    records_read = 0
+    records_written = 0
+
+    try:
+        print(f"DEBUG: About to INSERT audit record for job: {job_name}")
+        result = dw_db.execute(text("""
+            INSERT INTO etl_job_audit_log (job_name, source_table, target_table, status, start_time)
+            VALUES (:job_name, 'credit_cards', 'dim_credit_card', 'started', :start_time)
+        """), {"job_name": job_name, "start_time": start_time})
+        dw_db.commit()
+        print(f"DEBUG: INSERT successful, affected rows: {result.rowcount}")
+
+
+        audit_id = dw_db.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        print(f"DEBUG: Retrieved audit_id = {audit_id}")
+
+        # Verify the record was actually created
+        verify_result = dw_db.execute(text("SELECT COUNT(*) FROM etl_job_audit_log WHERE audit_id = :id"), {"id": audit_id}).scalar()
+        print(f"DEBUG: Verification - found {verify_result} records with audit_id {audit_id}")
+
+        credit_cards = extract_credit_cards(oltp_db, last_processed_id)
+        records_read = len(credit_cards)
+        transformed = transform_credit_cards(credit_cards)
+        records_written = load_credit_cards(dw_db, transformed)
+
+        end_time = datetime.now()
+        print(f"DEBUG: About to UPDATE audit_id {audit_id} with {records_written} records")
+        dw_db.execute(text("""
+            UPDATE etl_job_audit_log
+            SET status = 'success',
+                records_read = :records_read,
+                records_written = :records_written,
+                end_time = :end_time,
+                duration_seconds = TIMESTAMPDIFF(SECOND, :start_time, :end_time)
+            WHERE audit_id = :audit_id
+        """), {
+            "records_read": records_read,
+            "records_written": records_written,
+            "end_time": end_time,
+            "start_time": start_time,
+            "audit_id": audit_id
+        })
+        dw_db.commit()
+    except Exception as e:
+        end_time = datetime.now()
+        dw_db.execute(text("""
+            UPDATE etl_job_audit_log
+            SET status = 'failed',
+                error_message = :error,
+                end_time = :end_time,
+                duration_seconds = TIMESTAMPDIFF(SECOND, :start_time, :end_time)
+            WHERE audit_id = :audit_id
+        """), {
+            "error": str(e),
+            "end_time": end_time,
+            "start_time": start_time,
+            "audit_id": audit_id
+        })
+        dw_db.commit()
+        logger.exception("ETL job failed.")
+        raise
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
