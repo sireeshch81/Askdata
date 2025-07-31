@@ -7,6 +7,9 @@ RUN apt-get update && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y curl
+
+
 # 2. Set working directory and copy requirements
 WORKDIR /app
 COPY requirements.txt .

@@ -1,148 +1,67 @@
-import os
 import streamlit as st
-import pandas as pd
-from sqlalchemy import create_engine, text
-import hashlib
-import plotly.express as px
-from dotenv import load_dotenv
+from keycloak import KeycloakOpenID
+import jwt
 
-# Load environment variables
-load_dotenv()
+KEYCLOAK_SERVER_URL = "http://keycloak:8080/auth"
+KEYCLOAK_REALM_NAME = "askdata-realm"
+KEYCLOAK_CLIENT_ID = "askdataclient"
+KEYCLOAK_CLIENT_SECRET = "ooDSACRdaN3sbUzgCdaMGNt9Ez2YQv7j"
 
-# Database connection settings
-MYSQL_UI_USER = os.getenv("MYSQL_UI_USER", "root")
-MYSQL_UI_PASSWORD = os.getenv("MYSQL_UI_ROOT_PASSWORD", "password")
-MYSQL_UI_HOST = os.getenv("MYSQL_UI_HOST", "db")
-MYSQL_UI_PORT = os.getenv("MYSQL_UI_PORT", "3306")
-MYSQL_UI_DATABASE = os.getenv("MYSQL_UI_DATABASE", "mydb")
+keycloak_openid = KeycloakOpenID(
+    server_url=KEYCLOAK_SERVER_URL,
+    client_id=KEYCLOAK_CLIENT_ID,
+    realm_name=KEYCLOAK_REALM_NAME,
+    client_secret_key=KEYCLOAK_CLIENT_SECRET,
+)
 
-# Create SQLAlchemy database URL
-DB_URL = f"mysql+mysqlconnector://{MYSQL_UI_USER}:{MYSQL_UI_PASSWORD}@{MYSQL_UI_HOST}:{MYSQL_UI_PORT}/{MYSQL_UI_DATABASE}"
+def authenticate_user():
+    if 'token' not in st.session_state:
+        st.title("Keycloak Authentication")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            try:
+                token = keycloak_openid.token(username, password)
+                st.session_state['token'] = token   # Save token to session state
+                st.success("You are logged in!")
+                st.rerun()
+            except Exception as e:
+                print(e)
+                st.error(f"Authentication failed: {str(e)}")
+    return st.session_state.get('token', None)
 
+def main():
+    token = authenticate_user()
 
+    if token:
+        st.success("You are logged in!")
+        st.write("JWT Token Info:")
+        st.json(token)
 
-#DB_URL = f"mysql+mysqlconnector://{st.secrets['connections']['mysql']['username']}:{st.secrets['connections']['mysql']['password']}@{st.secrets['connections']['mysql']['host']}:{st.secrets['connections']['mysql']['port']}/{st.secrets['connections']['mysql']['database']}"
-engine = create_engine(DB_URL)
+        access_token_str = token.get('access_token')
+        if access_token_str:
+            try:
+                decoded_token = jwt.decode(access_token_str, options={"verify_signature": False})
+                st.write("Decoded Access Token Payload:")
+                st.json(decoded_token)
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def validate_login(username, password):
-    with engine.connect() as conn:
-        rs = conn.execute(
-            text("SELECT id FROM users WHERE username = :username AND password = :password"),
-            {"username": username, "password": hash_password(password)}
-        )
-        row = rs.fetchone()
-        return row[0] if row else None
-def get_user_roles(user_id):
-    with engine.connect() as conn:
-        rs = conn.execute(
-            text("SELECT roles.role_name FROM roles "
-                 "INNER JOIN user_roles ON roles.id = user_roles.role_id "
-                 "WHERE user_roles.user_id = :user_id"),
-            {"user_id": user_id}
-        )
-        return [r[0] for r in rs.fetchall()]
-
-def has_role(role):
-    return "roles" in st.session_state and role in st.session_state["roles"]
-
-def fetch_sales_reports():
-    query = """
-    SELECT
-        sr.id,
-        co.name AS company,
-        i.industry_name AS industry,
-        c.country_name AS country,
-        sr.report_date,
-        sr.sales_amount,
-        sr.currency
-    FROM sales_reports sr
-    JOIN companies co ON sr.company_id = co.id
-    JOIN industries i ON sr.industry_id = i.id
-    JOIN countries c ON sr.country_id = c.id
-    ORDER BY sr.report_date DESC
-    """
-    with engine.connect() as conn:
-        df = pd.read_sql(query, conn)
-    return df
-
-def sales_by(x_field="company"):
-    # Group and sum for bar plot
-    data = fetch_sales_reports()
-    return data.groupby(x_field)['sales_amount'].sum().reset_index()
-
-
-
-
-def login_page():
-    st.title("Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        user_id = validate_login(username, password)
-        if user_id:
-            st.session_state["user_id"] = user_id
-            st.session_state["roles"] = get_user_roles(user_id)
-            st.session_state["page"] = "dashboard"  # <--- Track what page to show
-            st.success("Login successful!")
-            st.rerun()  # <--- force UI refresh
+                if "realm_access" in decoded_token and "roles" in decoded_token["realm_access"]:
+                    st.write(f"Realm Roles: {decoded_token['realm_access']['roles']}")
+                if "resource_access" in decoded_token and KEYCLOAK_CLIENT_ID in decoded_token["resource_access"] and "roles" in decoded_token["resource_access"][KEYCLOAK_CLIENT_ID]:
+                    st.write(f"Client Roles: {decoded_token['resource_access'][KEYCLOAK_CLIENT_ID]['roles']}")
+            except jwt.ExpiredSignatureError:
+                st.error("Access token has expired.")
+            except jwt.InvalidTokenError as e:
+                st.error(f"Invalid access token: {e}")
         else:
-            st.error("Invalid credentials.")
+            st.warning("Access token not found in the response.")
 
-def dashboard_page():
-    st.title("Dashboard")
-    st.write(f"Welcome, your roles: {', '.join(st.session_state['roles'])}")
+        # Optional: Add a logout button
+        if st.button("Logout"):
+            del st.session_state['token']
+            st.rerun()
+    else:
+        st.warning("Please log in to use the app.")
 
-    st.header("Sales Reports Table")
-    df = fetch_sales_reports()
-    st.dataframe(df)
-    
-    st.subheader("Sales by:")
-    option = st.selectbox(
-        "Select grouping for bar graph", 
-        ("company", "industry", "country")
-    )
-    bar_data = sales_by(option)
-    fig = px.bar(
-        bar_data, x=option, y="sales_amount",
-        labels={option: option.capitalize(), "sales_amount": "Total Sales"},
-        title=f"Total Sales by {option.capitalize()}"
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Role-based content rendering
-    if has_role("admin"):
-        st.subheader("Admin Panel")
-        st.markdown("### User Management")
-        st.info("Only admins can see this section.")
-        # Example admin-only button
-        if st.button("Add New User"):
-            st.success("Pretend to add a new user!")
-    
-    if has_role("moderator"):
-        st.subheader("Moderator Panel")
-        st.markdown("### Moderation Area")
-        st.info("Only moderators can see this section.")
-        # Example moderator-only action
-        if st.button("Review Reports"):
-            st.success("Pretend to review reported posts!")
-    
-    if has_role("user"):
-        st.subheader("User Panel")
-        st.markdown("### General User Section")
-        st.info("Regular users & above can see this.")
-
-    # Add a logout button
-    if st.button("Logout"):
-        st.session_state.clear()
-        st.rerun()
-
-# ----- Main app logic -----
-if "user_id" not in st.session_state:
-    login_page()
-else:
-    dashboard_page()
-
-
+if __name__ == "__main__":
+    main()

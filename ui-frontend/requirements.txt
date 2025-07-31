@@ -1,5 +1,10 @@
+# streamlit==1.42.0
+# mysql-connector-python
+# python-dotenv
+# SQLAlchemy
+# plotly
+# streamlit-keycloak
 streamlit
-mysql-connector-python
-python-dotenv
-SQLAlchemy
-plotly
+python-keycloak
+requests
+PyJWT
