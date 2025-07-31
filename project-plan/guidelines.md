@@ -59,5 +59,4 @@ AskData will allow ordinary business users to query and visualize customers' cre
 * It will be a Docker containerized Python application using FastAPI as the web framework. 
 * It will use SQLAlchemy as the ORM to interact with a MySQL database.
 * The application will expose RESTful APIs to perform actions on behalf of the ui-layer
-* 
-*  
+* It will include endpoints for user authentication, data retrieval, and data manipulation.
