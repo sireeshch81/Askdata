@@ -54,3 +54,10 @@ AskData will allow ordinary business users to query and visualize customers' cre
 * It will provide a user-friendly interface for querying and visualizing data from the Data Warehouse.
 * It will include features for filtering, sorting, and aggregating data, as well as generating charts and graphs.
 * It will also include a dashboard to provide an overview of key metrics and trends in the data.
+
+#### API Backend
+* It will be a Docker containerized Python application using FastAPI as the web framework. 
+* It will use SQLAlchemy as the ORM to interact with a MySQL database.
+* The application will expose RESTful APIs to perform actions on behalf of the ui-layer
+* 
+*  

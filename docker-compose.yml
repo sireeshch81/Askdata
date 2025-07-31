@@ -158,7 +158,7 @@ services:
     image: mysql:latest
     container_name: ui-frontend-db
     ports:
-      - "3306:3306"
+      - "3308:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_UI_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_UI_DATABASE}
