@@ -1,21 +1,28 @@
-from logging.config import fileConfig
-import os
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from sqlalchemy import create_engine
-
-from alembic import context
-
-# Import models for autogenerate support
 import sys
 import os
+from logging.config import fileConfig
+from sqlalchemy import engine_from_config, pool
+from alembic import context
+from dotenv import load_dotenv
+
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path=env_path)
+
+# Build the URL from environment variables
+user = os.environ["MYSQL_DW_USER"]
+password = os.environ["MYSQL_DW_PASSWORD"]
+host = os.environ["MYSQL_DW_HOST"]
+port = os.environ["MYSQL_DW_PORT"]
+database = os.environ["MYSQL_DW_DATABASE"]
+
+url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+
+config = context.config
+config.set_main_option("sqlalchemy.url", url)
+
+# TODO: May need to revisit this and import the individual classes if needed
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from models import Base
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

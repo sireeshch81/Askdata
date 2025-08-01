@@ -3,6 +3,7 @@ FROM python:3.13-slim AS builder
 WORKDIR /app
 
 COPY pyproject.toml .
+COPY requirements.txt .
 
 # Copy Zscaler root certificate into the trusted CA store
 COPY zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
@@ -20,8 +21,9 @@ RUN apt-get update && apt-get install -y python3-venv
 RUN python3 -m venv /app/venv \
     && . /app/venv/bin/activate \
     && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --upgrade pip \
-    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org uvicorn \
-    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org .
+    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org uv \
+    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org . \
+    && pip install -r requirements.txt
 
 FROM python:3.13-slim AS runtime
 
