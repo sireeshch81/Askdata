@@ -11,10 +11,16 @@ class EmploymentStatus(str, Enum):
     unemployed = "unemployed"
     retired = "retired"
 
+    class Config:
+        from_attributes = True
+
 class MemberStatus(str, Enum):
     active = "active"
     inactive = "inactive"
     suspended = "suspended"
+
+    class Config:
+        from_attributes = True
 
 class CardType(str, Enum):
     visa = "visa"
@@ -22,11 +28,17 @@ class CardType(str, Enum):
     amex = "amex"
     discover = "discover"
 
+    class Config:
+        from_attributes = True
+
 class CardStatus(str, Enum):
     active = "active"
     blocked = "blocked"
     expired = "expired"
     closed = "closed"
+
+    class Config:
+        from_attributes = True
 
 class ProductType(str, Enum):
     credit_card = "credit_card"
@@ -36,11 +48,17 @@ class ProductType(str, Enum):
     cd = "cd"
     investment = "investment"
 
+    class Config:
+        from_attributes = True
+
 class ProductCategory(str, Enum):
     premium = "premium"
     standard = "standard"
     basic = "basic"
     secured = "secured"
+
+    class Config:
+        from_attributes = True
 
 class PaymentMethod(str, Enum):
     auto_pay = "auto_pay"
@@ -49,17 +67,26 @@ class PaymentMethod(str, Enum):
     mail = "mail"
     branch = "branch"
 
+    class Config:
+        from_attributes = True
+
 class PaymentStatus(str, Enum):
     on_time = "on_time"
     late = "late"
     missed = "missed"
     partial = "partial"
 
+    class Config:
+        from_attributes = True
+
 class RecommendationStatus(str, Enum):
     pending = "pending"
     accepted = "accepted"
     declined = "declined"
     expired = "expired"
+
+    class Config:
+        from_attributes = True
 
 # Base schemas
 class MemberBase(BaseModel):
@@ -82,6 +109,9 @@ class MemberBase(BaseModel):
     member_tenure_years: Optional[int] = None
     member_status: Optional[MemberStatus] = None
 
+    class Config:
+        from_attributes = True
+
 class CreditCardBase(BaseModel):
     card_id: int
     member_key: int
@@ -94,6 +124,9 @@ class CreditCardBase(BaseModel):
     issue_date: Optional[date] = None
     expiry_date: Optional[date] = None
     card_age_months: Optional[int] = None
+
+    class Config:
+        from_attributes = True
 
 class FinancialProductBase(BaseModel):
     product_id: int
@@ -114,6 +147,9 @@ class FinancialProductBase(BaseModel):
     eligibility_tier: Optional[str] = None
     is_active: Optional[bool] = None
 
+    class Config:
+        from_attributes = True
+
 class PaymentBase(BaseModel):
     member_key: int
     card_key: int
@@ -131,6 +167,9 @@ class PaymentBase(BaseModel):
     is_minimum_payment: Optional[bool] = None
     is_over_payment: Optional[bool] = None
     payment_status: PaymentStatus
+
+    class Config:
+        from_attributes = True
 
 class FinancialHealthBase(BaseModel):
     member_key: int
@@ -153,6 +192,9 @@ class FinancialHealthBase(BaseModel):
     credit_score_tier: Optional[str] = None
     utilization_tier: Optional[str] = None
 
+    class Config:
+        from_attributes = True
+
 class ProductRecommendationBase(BaseModel):
     member_key: int
     product_key: int
@@ -167,6 +209,9 @@ class ProductRecommendationBase(BaseModel):
     is_expired: Optional[bool] = None
     is_high_confidence: Optional[bool] = None
     recommendation_status: Optional[RecommendationStatus] = None
+
+    class Config:
+        from_attributes = True
 
 class CreditCardBalanceBase(BaseModel):
     member_key: int
@@ -183,6 +228,9 @@ class CreditCardBalanceBase(BaseModel):
     is_high_utilization: Optional[bool] = None
     is_maxed_out: Optional[bool] = None
 
+    class Config:
+        from_attributes = True
+
 # Response schemas
 class Member(MemberBase):
     member_key: int
@@ -192,9 +240,8 @@ class Member(MemberBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    class Config:
+        from_attributes = True
 
 class CreditCard(CreditCardBase):
     card_key: int
@@ -213,21 +260,21 @@ class FinancialProduct(FinancialProductBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Payment(PaymentBase):
     payment_key: int
     created_datetime: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class FinancialHealth(FinancialHealthBase):
     health_key: int
     created_datetime: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ProductRecommendation(ProductRecommendationBase):
     recommendation_key: int
@@ -235,19 +282,22 @@ class ProductRecommendation(ProductRecommendationBase):
     updated_datetime: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CreditCardBalance(CreditCardBalanceBase):
     balance_key: int
     created_datetime: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Query parameter schemas
 class PaginationParams(BaseModel):
     skip: int = 0
     limit: int = 100
+
+    class Config:
+        from_attributes = True
 
 class MemberFilterParams(BaseModel):
     member_id: Optional[int] = None
@@ -261,6 +311,9 @@ class MemberFilterParams(BaseModel):
     member_status: Optional[MemberStatus] = None
     is_current: Optional[bool] = True
 
+    class Config:
+        from_attributes = True
+
 class CreditCardFilterParams(BaseModel):
     card_id: Optional[int] = None
     member_key: Optional[int] = None
@@ -269,6 +322,9 @@ class CreditCardFilterParams(BaseModel):
     card_status: Optional[CardStatus] = None
     is_current: Optional[bool] = True
 
+    class Config:
+        from_attributes = True
+
 class FinancialHealthFilterParams(BaseModel):
     member_key: Optional[int] = None
     assessment_date_key: Optional[int] = None
@@ -276,12 +332,18 @@ class FinancialHealthFilterParams(BaseModel):
     credit_score_tier: Optional[str] = None
     utilization_tier: Optional[str] = None
 
+    class Config:
+        from_attributes = True
+
 class PaymentFilterParams(BaseModel):
     member_key: Optional[int] = None
     card_key: Optional[int] = None
     payment_date_key: Optional[int] = None
     payment_status: Optional[PaymentStatus] = None
     is_on_time: Optional[bool] = None
+
+    class Config:
+        from_attributes = True
 
 class ProductRecommendationFilterParams(BaseModel):
     member_key: Optional[int] = None
@@ -291,6 +353,9 @@ class ProductRecommendationFilterParams(BaseModel):
     is_expired: Optional[bool] = None
     is_high_confidence: Optional[bool] = None
 
+    class Config:
+        from_attributes = True
+
 # Response wrappers
 class PaginatedResponse(BaseModel):
     total: int
@@ -298,6 +363,9 @@ class PaginatedResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+    class Config:
+        from_attributes = True
 
 class MemberResponse(PaginatedResponse):
     items: List[Member]
@@ -334,7 +402,7 @@ class MemberPaymentSummary(BaseModel):
     avg_days_late: Decimal
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ProductRecommendationMetrics(BaseModel):
     product_name: str
@@ -346,7 +414,7 @@ class ProductRecommendationMetrics(BaseModel):
     avg_recommendation_score: Decimal
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MemberHealthTrend(BaseModel):
     member_id: int
@@ -360,4 +428,4 @@ class MemberHealthTrend(BaseModel):
     avg_credit_utilization: Decimal
 
     class Config:
-        orm_mode = True
+        from_attributes = True
