@@ -4,12 +4,23 @@ WORKDIR /app
 
 COPY pyproject.toml .
 
+# Copy Zscaler root certificate into the trusted CA store
+COPY zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
+
+# Set permissions and update CA certificates inside the container
+RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt && update-ca-certificates
+
+# Set environment variables so Python and pip use the updated CA cert bundle
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y python3-venv
 
 RUN python3 -m venv /app/venv \
     && . /app/venv/bin/activate \
     && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --upgrade pip \
-    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org uv \
+    && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org uvicorn \
     && pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org .
 
 FROM python:3.13-slim AS runtime

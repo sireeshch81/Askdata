@@ -10,9 +10,22 @@ RUN echo 'Acquire::http::Timeout "300";' > /etc/apt/apt.conf.d/99timeout \
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install ca-certificates first so update-ca-certificates is available
+RUN apt-get update -y && apt-get install -y --no-install-recommends ca-certificates
+
+# Copy Zscaler root certificate into the trusted CA store
+COPY zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
+
+# Set permissions and update CA certificates inside the container
+RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt \
+    && update-ca-certificates
+
+# Set environment variables so Python and requests use the updated CA cert bundle
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
 # Install system dependencies
-RUN apt-get update -y && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends software-properties-common \
+RUN apt-get install -y --no-install-recommends software-properties-common \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get install -y --no-install-recommends \
     build-essential \
@@ -34,8 +47,8 @@ RUN apt-get update -y && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Rust and Cargo
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+#RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+#ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Java
 RUN curl -O https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558476027ac/13/GPL/openjdk-21.0.2_linux-x64_bin.tar.gz \
@@ -58,7 +71,7 @@ RUN python3.12 -m venv /app/.venv \
     && pip install uv
 
 # Install JupyterLab and essential packages first
-RUN . .venv/bin/activate && uv pip install --no-cache-dir \
+RUN . /app/.venv/bin/activate && uv pip install --no-cache-dir \
     "pandas>=2.2.0" \
     jupyterlab \
     ipykernel
@@ -76,6 +89,7 @@ RUN . /app/.venv/bin/activate \
     && uv pip install ipykernel \
     && python3 -m ipykernel install --sys-prefix
 
+
 # Stage 2: Runtime
 FROM ubuntu:noble AS runtime
 
@@ -92,6 +106,20 @@ RUN echo 'Acquire::http::Timeout "300";' > /etc/apt/apt.conf.d/99timeout \
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Install ca-certificates first in runtime stage and add Zscaler cert before any apt operations
+RUN apt-get update -y && apt-get install -y --no-install-recommends ca-certificates
+
+# Copy Zscaler root certificate from builder to runtime
+COPY --from=builder /usr/local/share/ca-certificates/zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
+
+# Update CA certificates in runtime
+RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt \
+    && update-ca-certificates
+
+# Set SSL env vars
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 # Install only runtime dependencies
 RUN apt-get update -y && apt-get upgrade -y \
@@ -114,6 +142,7 @@ RUN apt-get update -y && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
 # Copy Java from builder
 COPY --from=builder /usr/lib/jvm/openjdk-21 /usr/lib/jvm/openjdk-21
 
@@ -144,9 +173,6 @@ RUN chown -R ${APPUSER}:${APPUSER_GID} /app \
     && echo "alias ll='ls -lahF'" >> /home/${APPUSER}/.bashrc
 
 USER ${APPUSER}
-
-# Set the entrypoint for JupyterLab, if using it. For now, use uvicorn.
-# ENTRYPOINT ["/bin/bash", "-c", "source /.venv/bin/activate && jupyter-lab --ServerApp.ip=0.0.0.0 --ServerApp.port=8888 --ServerApp.allow_origin=* --ServerApp.token='' --ServerApp.base_url=/jupyterlab/default"]
 
 EXPOSE 5002
 
