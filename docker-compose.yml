@@ -216,7 +216,10 @@ services:
       - ./keycloak/import:/opt/keycloak/data/import
     networks:
       - app-network
-
+10:
+  89:
+    2:
+      200:
 volumes:
   mongo-data:
   ollama_data:
