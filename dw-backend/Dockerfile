@@ -28,7 +28,8 @@ RUN apt-get update && apt-get install -y netcat-openbsd \
 
 # Create a non-root user and set permissions
 RUN useradd --create-home --shell /bin/bash appuser \
-    && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc
+    && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc \
+    && echo "DW-BACKEND: Running in container" >> /home/appuser/hostinfo.txt
 
 #RUN python3 -m venv /app/venv \
 #    && . /app/venv/bin/activate \
