@@ -1,0 +1,59 @@
+MySQL DW database is ready!
+Running database migrations...
+{'here': '/app', 'script_location': 'migrations', 'sqlalchemy.url': 'mysql+pymysql://${MYSQL_DW_USER}:${MYSQL_DW_PASSWORD}@${MYSQL_DW_HOST}:${MYSQL_DW_PORT}/${MYSQL_DW_DATABASE}', 'url': 'mysql+pymysql://${MYSQL_DW_USER}:${MYSQL_DW_PASSWORD}@${MYSQL_DW_HOST}:${MYSQL_DW_PORT}/${MYSQL_DW_DATABASE}'}
+Traceback (most recent call last):
+  File "/app/venv/bin/alembic", line 10, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/app/venv/lib/python3.13/site-packages/alembic/config.py", line 1016, in main
+    CommandLine(prog=prog).main(argv=argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/app/venv/lib/python3.13/site-packages/alembic/config.py", line 1006, in main
+    self.run_cmd(cfg, options)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/app/venv/lib/python3.13/site-packages/alembic/config.py", line 940, in run_cmd
+    fn(
+    ~~^
+        config,
+        ^^^^^^^
+        *[getattr(options, k, None) for k in positional],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        **{k: getattr(options, k, None) for k in kwarg},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/app/venv/lib/python3.13/site-packages/alembic/command.py", line 483, in upgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/app/venv/lib/python3.13/site-packages/alembic/script/base.py", line 549, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/app/venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 116, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/app/venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 136, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/migrations/env.py", line 58, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/app/migrations/env.py", line 43, in run_migrations_online
+    connectable = engine_from_config(
+        section,
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+  File "/app/venv/lib/python3.13/site-packages/sqlalchemy/engine/create.py", line 823, in engine_from_config
+    return create_engine(url, **options)
+  File "<string>", line 2, in create_engine
+  File "/app/venv/lib/python3.13/site-packages/sqlalchemy/util/deprecations.py", line 281, in warned
+    return fn(*args, **kwargs)  # type: ignore[no-any-return]
+  File "/app/venv/lib/python3.13/site-packages/sqlalchemy/engine/create.py", line 549, in create_engine
+    u = _url.make_url(url)
+  File "/app/venv/lib/python3.13/site-packages/sqlalchemy/engine/url.py", line 856, in make_url
+    return _parse_url(name_or_url)
+  File "/app/venv/lib/python3.13/site-packages/sqlalchemy/engine/url.py", line 917, in _parse_url
+    components["port"] = int(components["port"])
+                         ~~~^^^^^^^^^^^^^^^^^^^^
+ValueError: invalid literal for int() with base 10: '${MYSQL_DW_PORT}'

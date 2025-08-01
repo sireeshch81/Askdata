@@ -3,10 +3,22 @@ import os
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
+from dotenv import load_dotenv
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path=env_path)
+
+# Build the URL from environment variables
+user = os.environ["MYSQL_DW_USER"]
+password = os.environ["MYSQL_DW_PASSWORD"]
+host = os.environ["MYSQL_DW_HOST"]
+port = os.environ["MYSQL_DW_PORT"]
+database = os.environ["MYSQL_DW_DATABASE"]
+
+url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+
 config = context.config
+config.set_main_option("sqlalchemy.url", url)
 
 # Interpret the config file for Python logging.
 fileConfig(config.config_file_name)

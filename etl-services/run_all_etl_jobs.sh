@@ -3,6 +3,8 @@
 # Run all ETL jobs for AskData
 echo "Starting ETL jobs at $(date)"
 
+. .env
+
 python main.py --jobs all
 
 EXIT_CODE=$?
