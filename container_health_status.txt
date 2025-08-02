@@ -1,0 +1,8 @@
+Health Check Report - Fri Aug  1 16:56:46 EDT 2025
+dw: 404
+ollama: 200
+chromadb: 404
+etl: 404
+oltp: 404
+streamlit: 200
+keycloak: 302

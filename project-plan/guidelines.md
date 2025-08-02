@@ -55,8 +55,26 @@ AskData will allow ordinary business users to query and visualize customers' cre
 * It will include features for filtering, sorting, and aggregating data, as well as generating charts and graphs.
 * It will also include a dashboard to provide an overview of key metrics and trends in the data.
 
+
 #### API Backend
-* It will be a Docker containerized Python application using FastAPI as the web framework. 
+* It will have its dependencies managed by UV.
+* It will be a Docker containerized Python application using FastAPI as the web framework, running Uvicorn as the ASGI server.
 * It will use SQLAlchemy as the ORM to interact with a MySQL database.
+* It will need to connect to MongoDB to retrieve user authentication data.
+* It will connect to MongoDB to retrieve custom JSON data for the UI layer.
+* It will use Pydantic for data validation and serialization.
+* It will leverage a common .env file for configuration management.
+* It will include a caching layer using Redis to improve performance for frequently accessed data. (if time permits)
 * The application will expose RESTful APIs to perform actions on behalf of the ui-layer
-* It will include endpoints for user authentication, data retrieval, and data manipulation.
+* It will include endpoints for user authentication, customer data retrieval, and data retrieval
+  * The three endpoints will be: 
+    * http://api-backend/customer_detail to retrieve customer details from the OLTP database
+      * It will accept a string "customer_name" as a query parameter, execute a hard-coded SQL query and return the customer details from the OLTP database in the form of:
+        * {"customers": [{ "member_id", "first_name", "last_name", "email", "phone", "date_of_birth" }]}
+    * http://api-backend/recommendations to retrieve recommendations from the DocumentDB database
+      * It will accept a string "customer_id" as a query parameter and return the recommendations for the customer in the form of:
+        * { "recommendations": [ { "id", "title", "description" } ] }
+    * http://api-backend/auth to authenticate the user
+      * It will accept a string "username" and "password" as query parameters and return a JWT token if the authentication is successful.
+      * It will return a 401 Unauthorized error if the authentication fails.
+* 

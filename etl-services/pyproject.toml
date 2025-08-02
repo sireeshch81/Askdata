@@ -12,5 +12,6 @@ dependencies = [
     "pymysql>=1.1.0",  # Add this for MySQL support
     "sqlalchemy>=2.0.41",
     "uv",
+    "uvicorn",
     "cryptography",
 ]

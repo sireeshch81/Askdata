@@ -4,17 +4,6 @@ WORKDIR /app
 
 COPY pyproject.toml .
 
-# Copy Zscaler root certificate into the trusted CA store
-COPY zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
-
-# Set permissions and update CA certificates inside the container
-RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt && update-ca-certificates
-
-# Set environment variables so Python and pip use the updated CA cert bundle
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-ENV PYTHONUNBUFFERED=1
-
 RUN apt-get update && apt-get install -y python3-venv
 
 RUN python3 -m venv /app/venv \
@@ -40,13 +29,7 @@ RUN apt-get update && apt-get install -y netcat-openbsd \
 # Create a non-root user and set permissions
 RUN useradd --create-home --shell /bin/bash appuser \
     && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc \
-    && echo "DW-BACKEND: Running in container" >> /home/appuser/hostinfo.txt
-
-#RUN python3 -m venv /app/venv \
-#    && . /app/venv/bin/activate \
-#    && pip install --upgrade pip \
-#    && pip install uv \
-#    && uv sync
+    && echo "API-BACKEND: Running in container" >> /home/appuser/hostinfo.txt
 
 COPY server_startup.sh .
 COPY . .
@@ -59,6 +42,6 @@ RUN chmod +x server_startup.sh \
 
 USER appuser
 
-EXPOSE 5001
+EXPOSE 5004
 
 CMD ["/app/server_startup.sh"]

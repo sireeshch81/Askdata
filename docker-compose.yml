@@ -42,9 +42,11 @@ services:
       - MYSQL_DW_HOST=${MYSQL_DW_HOST}
       - MYSQL_DW_PORT=${MYSQL_DW_PORT}
       - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
+    volumes:
+      - ./.env:/app/.env
     ports:
       - "5001:5001"
-    restart: unless-stopped
+#    restart: unless-stopped
     networks:
       - app-network
 
@@ -65,9 +67,38 @@ services:
       - MYSQL_OLTP_DATABASE=${MYSQL_OLTP_DATABASE}
     volumes:
       - ./financial_data:/app/financial_data
+      - ./.env:/app/.env
     ports:
       - "5002:5002"
     restart: unless-stopped
+    networks:
+      - app-network
+
+  api-backend:
+    container_name: askdata-api-backend
+    image: askdata-api-backend
+    build:
+      context: ./api-backend
+      dockerfile: Dockerfile
+    depends_on:
+      - oltp-db
+      - mongodb
+    environment:
+      PYTHONPATH: /app
+      MYSQL_OLTP_USER: ${MYSQL_OLTP_USER}
+      MYSQL_OLTP_PASSWORD: ${MYSQL_OLTP_PASSWORD}
+      MYSQL_OLTP_HOST: ${MYSQL_OLTP_HOST}
+      MYSQL_OLTP_PORT: ${MYSQL_OLTP_PORT}
+      MYSQL_OLTP_DATABASE: ${MYSQL_OLTP_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_HOST: ${MONGO_HOST}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    ports:
+      - "5004:5004"
+#    restart: unless-stopped
     networks:
       - app-network
 
@@ -82,6 +113,7 @@ services:
     volumes:
       - ./mongo-init:/docker-entrypoint-initdb.d
       - mongo-data:/data/db
+     # - ./.env:/app/.env
     restart: unless-stopped
     
   etl-services:
@@ -104,6 +136,8 @@ services:
       - MYSQL_DW_HOST=${MYSQL_DW_HOST}
       - MYSQL_DW_PORT=${MYSQL_DW_PORT}
       - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
+    volumes:
+      - ./.env:/app/.env 
     ports:
       - "5003:5003"
     restart: unless-stopped
@@ -113,11 +147,14 @@ services:
   # Ollama service for AI model serving
   ollama:
     container_name: askdata-ollama
+    build:
+      context: ./ollama
     image: ollama:latest
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+      # - ./.env:/app/.env  # optional, currently commented out
     restart: unless-stopped
     networks:
       - app-network
@@ -130,6 +167,7 @@ services:
       - "9000:8000"    # ChromaDB runs on port 8000 by default
     volumes:
       - ./chromadb/chroma_data:/data  # Bind mount to local directory
+     # - ./.env:/app/.env
     environment:
       - IS_PERSISTENT=TRUE
       - PERSIST_DIRECTORY=/data
@@ -146,6 +184,7 @@ services:
       - "8501:8501"
     volumes:
       - ./app/target:/app/target  # Mount upload directory
+     # - ./.env:/app/.env
     environment:
       - PYTHONPATH=/app
       - MYSQL_UI_USER=${MYSQL_UI_USER}
@@ -173,6 +212,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./ui-frontend-db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      #- ./.env:/app/.env
     networks:
       - app-network
 
@@ -186,6 +226,7 @@ services:
         POSTGRES_PASSWORD: keycloak
       volumes:
         - keycloak_pg_data:/var/lib/postgresql/data
+       # - ./.env:/app/.env
       restart: unless-stopped
       networks:
         - app-network
@@ -214,6 +255,7 @@ services:
     volumes: 
       - keycloak_data:/opt/keycloak/data
       - ./keycloak/import:/opt/keycloak/data/import
+#      - ./.env:/app/.env
     networks:
       - app-network
 
@@ -221,7 +263,7 @@ volumes:
   mongo-data:
   ollama_data:
   chromadb_data:
-  db_data:  
+  db_data:
   keycloak_pg_data:
   keycloak_data:
   
