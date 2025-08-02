@@ -4,6 +4,17 @@ WORKDIR /app
 
 COPY pyproject.toml .
 
+# Copy Zscaler root certificate into the trusted CA store
+COPY zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
+
+# Set permissions and update CA certificates inside the container
+RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt && update-ca-certificates
+
+# Set environment variables so Python and pip use the updated CA cert bundle
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y python3-venv
 
 RUN python3 -m venv /app/venv \
@@ -21,6 +32,19 @@ WORKDIR /app
 
 # Install dependencies and system tools
 COPY pyproject.toml .
+COPY .env .
+
+# Copy Zscaler root certificate into the trusted CA store
+COPY zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
+
+# Set permissions and update CA certificates inside the container
+RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt && update-ca-certificates
+
+# Set environment variables so Python and pip use the updated CA cert bundle
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y netcat-openbsd \
     && apt-get install -y --no-install-recommends python3-venv curl ca-certificates vim \
     && apt-get clean \
