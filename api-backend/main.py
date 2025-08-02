@@ -6,7 +6,7 @@ import logging
 from typing import Optional
 from datetime import date
 
-from database import get_mysql_db
+from database import get_db
 from mongodb import get_mongodb
 import schemas
 from auth import authenticate_user, create_access_token
@@ -41,7 +41,7 @@ def health_check():
 def get_customer_detail(
     customer_name: str = Query(..., description="Customer name to search for")
 ):
-    # db = get_mysql_db()
+    # db = get_db()
     # try:
     #     customers_dblist = db.query("Customer").filter(
     #         "first_name LIKE :name OR last_name LIKE :name",
