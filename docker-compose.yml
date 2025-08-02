@@ -137,7 +137,7 @@ services:
       - MYSQL_DW_PORT=${MYSQL_DW_PORT}
       - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
     volumes:
-      - ./.env:/app/.env
+      - ./.env:/app/.env 
     ports:
       - "5003:5003"
     restart: unless-stopped
