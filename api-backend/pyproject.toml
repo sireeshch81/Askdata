@@ -1,19 +1,22 @@
 [project]
-name = "dw-backend"
+name = "api-backend"
 version = "0.1.0"
-description = "Services for Data Warehouse. This includes schema management, data loading, and data extraction."
+description = "API Services for the UI."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "alembic",
     "fastapi",
     "uvicorn",
-    "psycopg2-binary",   # PostgreSQL support
-    "pymysql",  # Add this for MySQL support
+    "psycopg2-binary", # PostgreSQL support
+    "pymysql", # Add this for MySQL support
     "sqlalchemy",
     "uv",
     "cryptography",
     "python-dotenv",
+    "pymongo",
+    "dnspython",
+    "auth>=0.5.3",
 ]
 
 

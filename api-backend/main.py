@@ -9,7 +9,7 @@ from datetime import date
 from database import get_db
 from mongodb import get_mongodb
 import schemas
-from auth import authenticate_user, create_access_token
+from authentication import authenticate_user, create_access_token
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,71 +41,31 @@ def health_check():
 def get_customer_detail(
     customer_name: str = Query(..., description="Customer name to search for")
 ):
-    # db = get_db()
-    # try:
-    #     customers_dblist = db.query("Customer").filter(
-    #         "first_name LIKE :name OR last_name LIKE :name",
-    #     )
-    #     # TODO: Handle case where customer is not found with empty collection
-    #     if not customers_dblist:
-    #         raise HTTPException(status_code=404, detail="Customer not found")
-    #     return schemas.CustomerDetail(
-    #         member_id=customer.member_id,
-    #         first_name=customer.first_name,
-    #         last_name=customer.last_name,
-    #         email=customer.email,
-    #         phone=customer.phone,
-    #         date_of_birth=customer.date_of_birth
-    #     )
-
-    try:
-        sample_customers = [
-            schemas.CustomerDetail(
-                member_id=1001,
-                first_name="John",
-                last_name="Smith",
-                email="john.smith@email.com",
-                phone="555-0123",
-                date_of_birth=date(1985, 3, 15)
-            ),
-            schemas.CustomerDetail(
-                member_id=1002,
-                first_name="Sarah",
-                last_name="Johnson",
-                email="sarah.johnson@email.com",
-                phone="555-0456",
-                date_of_birth=date(1990, 7, 22)
-            ),
-            schemas.CustomerDetail(
-                member_id=1003,
-                first_name="Michael",
-                last_name="Brown",
-                email="michael.brown@email.com",
-                phone="555-0789",
-                date_of_birth=date(1978, 12, 8)
-            ),
-            schemas.CustomerDetail(
-                member_id=1004,
-                first_name="Emily",
-                last_name="Davis",
-                email="emily.davis@email.com",
-                phone="555-0321",
-                date_of_birth=date(1992, 5, 3)
-            ),
-            schemas.CustomerDetail(
-                member_id=1005,
-                first_name="David",
-                last_name="Wilson",
-                email="david.wilson@email.com",
-                phone="555-0654",
-                date_of_birth=date(1987, 9, 18)
-            )
-        ]
-        return sample_customers
-
-    except Exception as e:
-        logger.error(f"Error retrieving customer details: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    """
+    Return a stubbed customer detail matching the name, or a default if not found.
+    """
+    sample_customers = [
+        schemas.CustomerDetail(
+            customer_id="1001",
+            first_name="John",
+            last_name="Smith",
+            email="john.smith@email.com",
+            phone="555-0123",
+            date_of_birth=date(1985, 3, 15)
+        ),
+        schemas.CustomerDetail(
+            customer_id="1002",
+            first_name="Sarah",
+            last_name="Johnson",
+            email="sarah.johnson@email.com",
+            phone="555-0456",
+            date_of_birth=date(1990, 7, 22)
+        ),
+    ]
+    for customer in sample_customers:
+        if customer_name.lower() in customer.first_name.lower() or customer_name.lower() in customer.last_name.lower():
+            return customer
+    return sample_customers[0]  # Default stub
 
 
 @app.get("/recommendations", response_model=schemas.RecommendationsResponse)
@@ -113,33 +73,13 @@ def get_recommendations(
     customer_id: str = Query(..., description="Customer ID to get recommendations for")
 ):
     """
-    Retrieve recommendations from MongoDB for a specific customer.
+    Return stubbed recommendations for a customer.
     """
-    try:
-        mongo_db = get_mongodb()
-        recommendations_collection = mongo_db.recommendations
-        
-        # Find recommendations for the customer
-        customer_recs = recommendations_collection.find_one({"customer_id": customer_id})
-        
-        if not customer_recs:
-            raise HTTPException(status_code=404, detail="No recommendations found for customer")
-        
-        recommendations = []
-        for rec in customer_recs.get("recommendations", []):
-            recommendations.append(schemas.Recommendation(
-                id=rec.get("id"),
-                title=rec.get("title"),
-                description=rec.get("description")
-            ))
-        
-        return schemas.RecommendationsResponse(recommendations=recommendations)
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error retrieving recommendations: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    sample_recommendations = [
+        schemas.Recommendation(product_id="prod1", product_name="Credit Card Gold", score=0.95),
+        schemas.Recommendation(product_id="prod2", product_name="Personal Loan", score=0.89),
+    ]
+    return schemas.RecommendationsResponse(customer_id=customer_id, recommendations=sample_recommendations)
 
 
 @app.post("/auth", response_model=schemas.AuthResponse)
@@ -148,29 +88,12 @@ def authenticate(
     password: str = Query(..., description="Password for authentication")
 ):
     """
-    Authenticate user and return JWT token.
+    Stub authentication endpoint. Always returns a fake JWT.
     """
-    try:
-        mongo_db = get_mongodb()
-        
-        # Authenticate user against MongoDB
-        user = authenticate_user(mongo_db, username, password)
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication failed")
-        
-        # Create JWT token
-        access_token = create_access_token({"sub": username})
-        
-        return schemas.AuthResponse(
-            access_token=access_token,
-            token_type="bearer"
-        )
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error during authentication: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    if username and password:
+        return schemas.AuthResponse(access_token="stubbed.jwt.token", token_type="bearer")
+    else:
+        raise HTTPException(status_code=401, detail="Authentication failed")
 
 
 if __name__ == "__main__":
