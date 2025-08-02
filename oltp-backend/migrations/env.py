@@ -9,11 +9,11 @@ env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(dotenv_path=env_path)
 
 # Build the URL from environment variables
-user = os.environ["MYSQL_DW_USER"]
-password = os.environ["MYSQL_DW_PASSWORD"]
-host = os.environ["MYSQL_DW_HOST"]
-port = os.environ["MYSQL_DW_PORT"]
-database = os.environ["MYSQL_DW_DATABASE"]
+user = os.environ["MYSQL_OLTP_USER"]
+password = os.environ["MYSQL_OLTP_PASSWORD"]
+host = os.environ["MYSQL_OLTP_HOST"]
+port = os.environ["MYSQL_OLTP_PORT"]
+database = os.environ["MYSQL_OLTP_DATABASE"]
 
 url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
 
