@@ -1,0 +1,21 @@
+# Virtual environments
+recommendation-env/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Output files (generated data)
+output/
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
