@@ -46,7 +46,7 @@ services:
       - ./.env:/app/.env
     ports:
       - "5001:5001"
-    restart: unless-stopped
+#    restart: unless-stopped
     networks:
       - app-network
 
@@ -71,6 +71,34 @@ services:
     ports:
       - "5002:5002"
     restart: unless-stopped
+    networks:
+      - app-network
+
+  api-backend:
+    container_name: askdata-api-backend
+    image: askdata-api-backend
+    build:
+      context: ./api-backend
+      dockerfile: Dockerfile
+    depends_on:
+      - oltp-db
+      - mongodb
+    environment:
+      PYTHONPATH: /app
+      MYSQL_OLTP_USER: ${MYSQL_OLTP_USER}
+      MYSQL_OLTP_PASSWORD: ${MYSQL_OLTP_PASSWORD}
+      MYSQL_OLTP_HOST: ${MYSQL_OLTP_HOST}
+      MYSQL_OLTP_PORT: ${MYSQL_OLTP_PORT}
+      MYSQL_OLTP_DATABASE: ${MYSQL_OLTP_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_HOST: ${MONGO_HOST}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    ports:
+      - "5004:5004"
+#    restart: unless-stopped
     networks:
       - app-network
 
@@ -235,7 +263,7 @@ volumes:
   mongo-data:
   ollama_data:
   chromadb_data:
-  db_data:  
+  db_data:
   keycloak_pg_data:
   keycloak_data:
   

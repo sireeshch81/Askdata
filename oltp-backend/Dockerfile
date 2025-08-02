@@ -170,7 +170,8 @@ RUN rm -rf /usr/lib/python3.12/test/certdata/ || true \
 RUN chown -R ${APPUSER}:${APPUSER_GID} /app \
     && chmod +x /app/server_startup.sh \
     && chown ${APPUSER}:${APPUSER_GID} /home \
-    && echo "alias ll='ls -lahF'" >> /home/${APPUSER}/.bashrc
+    && echo "alias ll='ls -lahF'" >> /home/${APPUSER}/.bashrc \
+    && echo "OLTP-BACKEND: Running in container" >> /home/${APPUSER}/hostinfo.txt
 
 USER ${APPUSER}
 

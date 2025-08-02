@@ -28,3 +28,23 @@ All sensitive credentials and configuration parameters are stored in the `.env` 
 - It prunes unused volumes and networks.
 - Then rebuilds and restarts the stack using `docker-compose up -d --build`.
 - Run with: `./rebuild_docker.sh`
+
+
+### Notes
+
+#### Ports in use by services
+
+- **3306** - OLTP Database (MySQL)
+- **3307** - Data Warehouse Database (MySQL)  
+- **3308** - UI Frontend Database (MySQL)
+- **5001** - Data Warehouse Backend API
+- **5002** - OLTP Backend API
+- **5003** - ETL Services API
+- **5004** - API Backend
+- **5432** - Keycloak Database (PostgreSQL)
+- **8080** - Keycloak Authentication Service
+- **8501** - UI Frontend (Streamlit)
+- **9000** - ChromaDB Vector Database
+- **11434** - Ollama AI Model Service
+- **27017** - MongoDB
+
