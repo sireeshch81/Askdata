@@ -71,9 +71,16 @@ AskData will allow ordinary business users to query and visualize customers' cre
     * http://api-backend/customer_detail to retrieve customer details from the OLTP database
       * It will accept a string "customer_name" as a query parameter, execute a hard-coded SQL query and return the customer details from the OLTP database in the form of:
         * {"customers": [{ "member_id", "first_name", "last_name", "email", "phone", "date_of_birth" }]}
+      * It will return a 404 Not Found error if the customer is not found.
+      * It will return a 500 Internal Server Error if there is an error while querying the database.
+      * It will return a custom stub array for the moment until we have the OLTP backend ready.
     * http://api-backend/recommendations to retrieve recommendations from the DocumentDB database
       * It will accept a string "customer_id" as a query parameter and return the recommendations for the customer in the form of:
         * { "recommendations": [ { "id", "title", "description" } ] }
+      * It will need to connect to MongoDB to retrieve the recommendations.
+      * It will return a 404 Not Found error if the customer is not found.
+      * It will return a 500 Internal Server Error if there is an error while querying the database.
+      * It will need a modle to define the structure of the recommendations.
     * http://api-backend/auth to authenticate the user
       * It will accept a string "username" and "password" as query parameters and return a JWT token if the authentication is successful.
       * It will return a 401 Unauthorized error if the authentication fails.
