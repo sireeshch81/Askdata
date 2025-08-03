@@ -22,7 +22,7 @@ keycloak_openid = KeycloakOpenID(
 
 def authenticate_user():
     if 'token' not in st.session_state:
-        for key in ['search_results', 'selected_customer', 'last_query', 'query_input']:
+        for key in ['search_results', 'selected_customer']:
             st.session_state.pop(key, None)
 
         st.title("Login")
@@ -35,8 +35,7 @@ def authenticate_user():
             try:
                 token = keycloak_openid.token(username, password)
                 st.session_state['token'] = token
-                #st.experimental_rerun()
-                st.rerun()
+                st.stop()
             except Exception as e:
                 st.error(f"Authentication failed: {str(e)}")
         return None
@@ -122,41 +121,25 @@ def main():
         """, unsafe_allow_html=True)
     with cols[2]:
         if st.button("Logout"):
-            for key in ['token', 'search_results', 'selected_customer', 'last_query', 'query_input']:
+            for key in ['token', 'search_results', 'selected_customer']:
                 st.session_state.pop(key, None)
-            #st.experimental_rerun()
-            st.rerun()
-
-    # --- SEARCH FUNCTIONALITY ---
-
-    # Initialize last_query in session_state
-    if 'last_query' not in st.session_state:
-        st.session_state['last_query'] = ""
-
-    query_input = st.session_state.get('query_input', "")
-
-    # Clear search results if user changes query input (before submitting)
-    if query_input != st.session_state['last_query']:
-        st.session_state['search_results'] = []
-        st.session_state['selected_customer'] = None
+            st.stop()
 
     st.markdown('<div class="app-content">', unsafe_allow_html=True)
     st.title("🔍 Search Customers")
 
     with st.form("search_form"):
-        query = st.text_input("Enter customer name or product", key='query_input')
+        query = st.text_input("Enter customer name or product")
         submitted = st.form_submit_button("Search")
 
     if submitted:
-        cleaned_query = query.strip()
-        st.session_state['last_query'] = cleaned_query
-        if not cleaned_query:
+        if not query.strip():
             st.error("Please enter a valid search query.")
         else:
             try:
                 response = requests.get(
                     "http://askdata-api-backend:5004/customer_detail",
-                    params={"customer_name": cleaned_query}
+                    params={"customer_name": query}
                 )
                 if response.status_code == 200:
                     customers = response.json()
