@@ -1,0 +1,33 @@
+{
+  "customer_id": "CUST123",
+  "customer_profile": {
+    "name": "John Doe",
+    "annual_income": 75000.00,
+    "credit_score": 720,
+    "health_score": 0.85,
+    "risk_category": "LOW",
+    "utilization_ratio": 0.30
+  },
+  "recommendations": [
+    {
+      "rank": 1,
+      "product_name": "Premium Credit Card",
+      "product_type": "CREDIT_CARD",
+      "score": 0.92,
+      "max_score": 1.0,
+      "confidence": 0.95,
+      "reason": "Excellent credit score and low risk profile"
+    },
+    {
+      "rank": 2,
+      "product_name": "Savings Plus Account",
+      "product_type": "SAVINGS",
+      "score": 0.85,
+      "max_score": 1.0,
+      "confidence": 0.88,
+      "reason": "High annual income and stable profile"
+    }
+  ],
+  "created_at": "2025-08-03T10:00:00Z",
+  "updated_at": "2025-08-03T10:00:00Z"
+}

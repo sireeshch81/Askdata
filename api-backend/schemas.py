@@ -11,15 +11,6 @@ class CustomerDetail(BaseModel):
     phone: Optional[str] = Field(None, description="Customer's phone number")
     date_of_birth: Optional[date] = Field(None, description="Customer's date of birth")
 
-class Recommendation(BaseModel):
-    product_id: str = Field(..., description="ID of the recommended product")
-    product_name: str = Field(..., description="Name of the recommended product")
-    score: float = Field(..., description="Recommendation confidence score")
-
-class RecommendationsResponse(BaseModel):
-    customer_id: str = Field(..., description="ID of the customer for recommendations")
-    recommendations: List[Recommendation] = Field(..., description="List of product recommendations")
-
 class AuthRequest(BaseModel):
     username: str = Field(..., description="Username for authentication")
     password: str = Field(..., description="Password for authentication")
@@ -39,8 +30,7 @@ from dataclasses import dataclass, asdict
 from typing import List, Dict, Any
 
 
-@dataclass
-class CustomerProfile:
+class CustomerProfile(BaseModel):
     """Customer profile data structure"""
     name: str
     annual_income: float
@@ -50,8 +40,7 @@ class CustomerProfile:
     utilization_ratio: float
 
 
-@dataclass
-class Recommendation:
+class Recommendation(BaseModel):
     """Individual recommendation data structure"""
     rank: int
     product_name: str
@@ -62,21 +51,22 @@ class Recommendation:
     reason: str
 
 
-@dataclass
-class RecommendationDocument:
+class RecommendationDocument(BaseModel):
     """Complete recommendation document structure for MongoDB"""
+    customer_id: str
+    customer_profile: CustomerProfile
+    recommendations: List[Recommendation]
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the document to a dictionary for MongoDB insertion"""
+        return self.dict(exclude_none=True)
+
+
+class RecommendationsResponse(BaseModel):
     customer_id: str
     customer_profile: CustomerProfile
     recommendations: List[Recommendation]
     created_at: str
     updated_at: str
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the document to a dictionary for MongoDB insertion"""
-        return {
-            "customer_id": self.customer_id,
-            "customer_profile": asdict(self.customer_profile),
-            "recommendations": [asdict(rec) for rec in self.recommendations],
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-        }

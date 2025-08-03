@@ -35,6 +35,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize Mongo Connection
+
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
@@ -81,22 +84,12 @@ def get_recommendations(
     if not collection:
         raise HTTPException(status_code=404, detail="Recommendations not found")
 
-    recommendations = [
-        schemas.Recommendation(
-            rank=rec.get("rank", 0),
-            product_name=rec.get("product_name", ""),
-            product_type=rec.get("product_type", ""),
-            score=rec.get("score", 0.0),
-            max_score=rec.get("max_score", 0.0),
-            confidence=rec.get("confidence", 0.0),
-            reason=rec.get("reason", "")
-        )
-        for rec in collection.get("recommendations", [])
-    ]
-
     return schemas.RecommendationsResponse(
-        customer_id=customer_id,
-        recommendations=recommendations
+        customer_id=collection["customer_id"],
+        customer_profile=schemas.CustomerProfile(**collection["customer_profile"]),
+        recommendations=[schemas.Recommendation(**rec) for rec in collection["recommendations"]],
+        created_at=collection["created_at"],
+        updated_at=collection["updated_at"]
     )
 
 
