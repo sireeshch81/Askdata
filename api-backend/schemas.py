@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from datetime import date
-from dataclasses import dataclass, asdict
+from datetime import date, datetime
+
 
 class CustomerDetail(BaseModel):
+    """Customer details schema"""
     customer_id: str = Field(..., description="Unique identifier for the customer")
     first_name: str = Field(..., description="Customer's first name")
     last_name: str = Field(..., description="Customer's last name")
@@ -11,27 +12,26 @@ class CustomerDetail(BaseModel):
     phone: Optional[str] = Field(None, description="Customer's phone number")
     date_of_birth: Optional[date] = Field(None, description="Customer's date of birth")
 
+
 class AuthRequest(BaseModel):
+    """Request model for authentication"""
     username: str = Field(..., description="Username for authentication")
     password: str = Field(..., description="Password for authentication")
 
+
 class AuthResponse(BaseModel):
+    """Response model for successful authentication"""
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field("bearer", description="Type of the token")
 
-class AuthErrorResponse(BaseModel):
-    detail: str = Field(..., description="Error message details")
 
-"""
-Data models for recommendation service MongoDB operations.
-This module provides Python objects and functions to work with recommendation data.
-"""
-from dataclasses import dataclass, asdict
-from typing import List, Dict, Any
+class AuthErrorResponse(BaseModel):
+    """Response model for authentication errors"""
+    detail: str = Field(..., description="Error message details")
 
 
 class CustomerProfile(BaseModel):
-    """Customer profile data structure"""
+    """Customer profile data structure for recommendations"""
     name: str
     annual_income: float
     credit_score: int
@@ -41,7 +41,7 @@ class CustomerProfile(BaseModel):
 
 
 class Recommendation(BaseModel):
-    """Individual recommendation data structure"""
+    """Individual product recommendation data structure"""
     rank: int
     product_name: str
     product_type: str
@@ -56,17 +56,18 @@ class RecommendationDocument(BaseModel):
     customer_id: str
     customer_profile: CustomerProfile
     recommendations: List[Recommendation]
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert the document to a dictionary for MongoDB insertion"""
+        """Convert to dict for MongoDB insertion, excluding None values"""
         return self.dict(exclude_none=True)
 
 
 class RecommendationsResponse(BaseModel):
+    """Response schema for customer recommendations"""
     customer_id: str
     customer_profile: CustomerProfile
     recommendations: List[Recommendation]
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime

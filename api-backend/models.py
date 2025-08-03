@@ -67,4 +67,3 @@ class FinancialProduct(Base):
     end_date = Column(DateTime, nullable=True)
 
     member = relationship("Member", back_populates="financial_products")
-

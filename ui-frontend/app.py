@@ -7,6 +7,35 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
+# Fix placeholder text color for gray backgrounds
+st.markdown(
+    """
+    <style>
+    ::placeholder {
+        color: #555555 !important;
+        opacity: 1 !important;
+    }
+    input::placeholder {
+        color: #555555 !important;
+        opacity: 1 !important;
+    }
+    input::-moz-placeholder {
+        color: #555555 !important;
+        opacity: 1 !important;
+    }
+    input:-ms-input-placeholder {
+        color: #555555 !important;
+        opacity: 1 !important;
+    }
+    input::-ms-input-placeholder {
+        color: #555555 !important;
+        opacity: 1 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Keycloak Configuration
 KEYCLOAK_SERVER_URL = "http://keycloak:8080/auth"
 KEYCLOAK_REALM_NAME = "askdata-realm"
@@ -22,7 +51,8 @@ keycloak_openid = KeycloakOpenID(
 
 def authenticate_user():
     if 'token' not in st.session_state:
-        for key in ['search_results', 'selected_customer', 'last_query', 'query_input']:
+        for key in ['search_results', 'selected_customer', 'last_customer_name', 'last_email', 'last_phone',
+                    'customer_name_input', 'email_input', 'phone_input']:
             st.session_state.pop(key, None)
 
         st.title("Login")
@@ -35,7 +65,6 @@ def authenticate_user():
             try:
                 token = keycloak_openid.token(username, password)
                 st.session_state['token'] = token
-                #st.experimental_rerun()
                 st.rerun()
             except Exception as e:
                 st.error(f"Authentication failed: {str(e)}")
@@ -122,21 +151,31 @@ def main():
         """, unsafe_allow_html=True)
     with cols[2]:
         if st.button("Logout"):
-            for key in ['token', 'search_results', 'selected_customer', 'last_query', 'query_input']:
+            for key in ['token', 'search_results', 'selected_customer', 'last_customer_name', 'last_email', 'last_phone',
+                        'customer_name_input', 'email_input', 'phone_input']:
                 st.session_state.pop(key, None)
-            #st.experimental_rerun()
             st.rerun()
 
     # --- SEARCH FUNCTIONALITY ---
 
-    # Initialize last_query in session_state
-    if 'last_query' not in st.session_state:
-        st.session_state['last_query'] = ""
+    # Initialize last search parameters in session_state
+    if 'last_customer_name' not in st.session_state:
+        st.session_state['last_customer_name'] = ""
+    if 'last_email' not in st.session_state:
+        st.session_state['last_email'] = ""
+    if 'last_phone' not in st.session_state:
+        st.session_state['last_phone'] = ""
 
-    query_input = st.session_state.get('query_input', "")
+    customer_name_input = st.session_state.get('customer_name_input', "")
+    email_input = st.session_state.get('email_input', "")
+    phone_input = st.session_state.get('phone_input', "")
 
-    # Clear search results if user changes query input (before submitting)
-    if query_input != st.session_state['last_query']:
+    # Clear search results if any input changes before submitting
+    if (
+        customer_name_input != st.session_state['last_customer_name'] or
+        email_input != st.session_state['last_email'] or
+        phone_input != st.session_state['last_phone']
+    ):
         st.session_state['search_results'] = []
         st.session_state['selected_customer'] = None
 
@@ -144,19 +183,47 @@ def main():
     st.title("🔍 Search Customers")
 
     with st.form("search_form"):
-        query = st.text_input("Enter customer name or product", key='query_input')
+        cols = st.columns(3)
+        with cols[0]:
+            customer_name_input = st.text_input(
+                "Customer Name",
+                key='customer_name_input',
+                placeholder="e.g. John Doe"
+            )
+        with cols[1]:
+            email_input = st.text_input(
+                "Email",
+                key='email_input',
+                placeholder="e.g. john@example.com"
+            )
+        with cols[2]:
+            phone_input = st.text_input(
+                "Phone",
+                key='phone_input',
+                placeholder="e.g. +1 234 567 8900"
+            )
         submitted = st.form_submit_button("Search")
 
     if submitted:
-        cleaned_query = query.strip()
-        st.session_state['last_query'] = cleaned_query
-        if not cleaned_query:
-            st.error("Please enter a valid search query.")
+        st.session_state['last_customer_name'] = customer_name_input.strip()
+        st.session_state['last_email'] = email_input.strip()
+        st.session_state['last_phone'] = phone_input.strip()
+
+        if not (st.session_state['last_customer_name'] or st.session_state['last_email'] or st.session_state['last_phone']):
+            st.error("Please enter at least one search criteria.")
         else:
             try:
+                params = {}
+                if st.session_state['last_customer_name']:
+                    params['customer_name'] = st.session_state['last_customer_name']
+                if st.session_state['last_email']:
+                    params['email'] = st.session_state['last_email']
+                if st.session_state['last_phone']:
+                    params['phone'] = st.session_state['last_phone']
+
                 response = requests.get(
                     "http://askdata-api-backend:5004/customer_detail",
-                    params={"customer_name": cleaned_query}
+                    params=params
                 )
                 if response.status_code == 200:
                     customers = response.json()
@@ -178,13 +245,9 @@ def main():
         df = pd.DataFrame(customers)
         df['Full Name'] = df['first_name'] + " " + df['last_name']
 
-        display_df = df[[
-            'customer_id',
-            'Full Name',
-            'email',
-            'phone',
-            'date_of_birth'
-        ]].rename(columns={
+        display_df = df[
+            ['customer_id', 'Full Name', 'email', 'phone', 'date_of_birth']
+        ].rename(columns={
             'customer_id': 'Customer ID',
             'Full Name': 'Name',
             'email': 'Email',
@@ -254,9 +317,6 @@ def main():
             if st.session_state.get('selected_customer') != selected_rows[0]:
                 st.session_state['selected_customer'] = selected_rows[0]
             st.success(f"Selected Customer: {selected_rows[0]['Name']} (ID: {selected_rows[0]['Customer ID']})")
-        else:
-            st.session_state['selected_customer'] = None
-            st.info("No customer selected yet.")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
