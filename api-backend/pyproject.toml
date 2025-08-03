@@ -17,8 +17,9 @@ dependencies = [
     "pymongo",
     "dnspython",
     "auth>=0.5.3",
+    "logging>=0.4.9.6",
+    "DBUtils>=3.0.0"
 ]
-
 
 
 

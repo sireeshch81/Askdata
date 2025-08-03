@@ -7,8 +7,11 @@ import logging
 from typing import List
 
 from database import get_db
+from faker_data_generator import product_recommendations
+from mongodb import get_mongodb
 import models
 import schemas
+import RecommendationDataManager
 from RecommendationDataManager import RecommendationDataManager
 # from auth import authenticate_user, create_access_token
 
@@ -75,12 +78,43 @@ def get_customer_detail(
 def get_recommendations(
     customer_id: str = Query(..., description="Customer ID to get recommendations for")
 ):
+     # mongodb=Depends(get_mongodb),
+     recommendation_manager = RecommendationDataManager.RecommendationDataManager()
+     collection = recommendation_manager.find_by_customer_id (customer_id)
     recommendation_manager = RecommendationDataManager()
     collection = recommendation_manager.find_by_customer_id(customer_id)
 
+     if len(collection) == 0:
+         raise HTTPException(status_code=404, detail="Recommendations not found")
     if not collection:
         raise HTTPException(status_code=404, detail="Recommendations not found")
 
+     prod_recommendations = [
+        schemas.RecommendationDocument (
+            customer_id=customer_id,
+            customer_profile=schemas.CustomerProfile(
+                name=collection[0]["name"],
+                annual_income=collection[0]["annual_income"],
+                credit_score=collection[0]["credit_score"],
+                health_score=collection[0]["health_score"],
+                risk_category=collection[0]["risk_category"],
+                utilization_ratio=collection[0]["utilization_ratio"],
+            ),
+            recommendations=[
+                schemas.Recommendation(
+                    rank=rec["rank"],
+                    product_name=rec["product_name"],
+                    product_type=rec["product_type"],
+                    score=rec["score"],
+                    max_score=rec["max_score"],
+                    confidence=rec["confidence"],
+                    reason=rec["reason"],
+                )
+                for rec in collection[0]["recommendations"]
+            ],
+            # created_at=collection[0]["created_at"],
+            # updated_at=collection[0]["updated_at"],
+    # Convert MongoDB document to schema model
     recommendations = [
         schemas.Recommendation(
             rank=rec.get("rank", 0),
@@ -91,9 +125,13 @@ def get_recommendations(
             confidence=rec.get("confidence", 0.0),
             reason=rec.get("reason", "")
         )
+     ]
         for rec in collection.get("recommendations", [])
     ]
 
+
+    return schemas.RecommendationDocument(
+        customer_id=customer_id, recommendations=product_recommendations
     return schemas.RecommendationsResponse(
         customer_id=customer_id,
         recommendations=recommendations
@@ -115,3 +153,4 @@ if __name__ == "__main__":
     import uvicorn
     logger.info("Starting API Backend server...")
     uvicorn.run(app, host="0.0.0.0", port=5004)
+

@@ -46,8 +46,10 @@ dependencies = [
     { name = "alembic" },
     { name = "auth" },
     { name = "cryptography" },
+    { name = "dbutils" },
     { name = "dnspython" },
     { name = "fastapi" },
+    { name = "logging" },
     { name = "psycopg2-binary" },
     { name = "pymongo" },
     { name = "pymysql" },
@@ -62,8 +64,10 @@ requires-dist = [
     { name = "alembic" },
     { name = "auth", specifier = ">=0.5.3" },
     { name = "cryptography" },
+    { name = "dbutils", specifier = ">=3.0.0" },
     { name = "dnspython" },
     { name = "fastapi" },
+    { name = "logging", specifier = ">=0.4.9.6" },
     { name = "psycopg2-binary" },
     { name = "pymongo" },
     { name = "pymysql" },
@@ -210,6 +214,15 @@ wheels = [
 ]
 
 [[package]]
+name = "dbutils"
+version = "3.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/d5/ad1aa0fd519d328405c7c549174a71d6480216da05187dbc9cb413bad6ce/dbutils-3.1.1.tar.gz", hash = "sha256:ade79fbc5786d7496d4138722fbca24340cf7c73b5d66df05296f656ff086bbf", size = 95821, upload-time = "2025-06-04T19:30:26.178Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f8/18/e4261a2b96d1387c16273dccf74bb88e3ecfe7061ea589655426aca6c3d1/dbutils-3.1.1-py3-none-any.whl", hash = "sha256:edc8ebd8445094c335d52e2bcbcf9f7dcc54d7a294adf7d01a8baf21924317f5", size = 32866, upload-time = "2025-06-04T19:30:24.782Z" },
+]
+
+[[package]]
 name = "dnspython"
 version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -315,6 +328,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/f1/70/7703c29685631f5a7
 wheels = [
     { url = "https://files.pythonhosted.org/packages/76/c6/c88e154df9c4e1a2a66ccf0005a88dfb2650c1dffb6f5ce603dfbd452ce3/idna-3.10-py3-none-any.whl", hash = "sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3", size = 70442, upload-time = "2024-09-15T18:07:37.964Z" },
 ]
+
+[[package]]
+name = "logging"
+version = "0.4.9.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/4b/979db9e44be09f71e85c9c8cfc42f258adfb7d93ce01deed2788b2948919/logging-0.4.9.6.tar.gz", hash = "sha256:26f6b50773f085042d301085bd1bf5d9f3735704db9f37c1ce6d8b85c38f2417", size = 96029, upload-time = "2013-06-04T23:43:22.086Z" }
 
 [[package]]
 name = "mako"
