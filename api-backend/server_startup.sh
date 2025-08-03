@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-. .env
+#. .env
+. /app/.env
 
 # Wait for the database to be ready
 echo "Waiting for MySQL OLTP database to be ready..."
