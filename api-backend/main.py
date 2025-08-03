@@ -7,9 +7,10 @@ import logging
 from typing import List
 
 from database import get_db
-from mongodb import get_mongodb
 import models
 import schemas
+from RecommendationDataManager import RecommendationDataManager
+# from auth import authenticate_user, create_access_token
 
 # Logging setup
 logging.basicConfig(
@@ -33,6 +34,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize Mongo Connection
+
 
 @app.get("/health")
 def health_check():
@@ -72,26 +76,20 @@ def get_customer_detail(
 
 @app.get("/recommendations", response_model=schemas.RecommendationsResponse)
 def get_recommendations(
-    customer_id: str = Query(..., description="Customer ID to get recommendations for"),
-    mongodb=Depends(get_mongodb),
+    customer_id: str = Query(..., description="Customer ID to get recommendations for")
 ):
-    recs_collection = mongodb["recommendations"]
-    raw_recs = list(recs_collection.find({"customer_id": customer_id}))
+    recommendation_manager = RecommendationDataManager()
+    collection = recommendation_manager.find_by_customer_id(customer_id)
 
-    if not raw_recs:
+    if not collection:
         raise HTTPException(status_code=404, detail="Recommendations not found")
 
-    recommendations = [
-        schemas.Recommendation(
-            product_id=rec.get("product_id"),
-            product_name=rec.get("product_name"),
-            score=rec.get("score"),
-        )
-        for rec in raw_recs
-    ]
-
     return schemas.RecommendationsResponse(
-        customer_id=customer_id, recommendations=recommendations
+        customer_id=collection["customer_id"],
+        customer_profile=schemas.CustomerProfile(**collection["customer_profile"]),
+        recommendations=[schemas.Recommendation(**rec) for rec in collection["recommendations"]],
+        created_at=collection["created_at"],
+        updated_at=collection["updated_at"]
     )
 
 

@@ -16,8 +16,8 @@ All sensitive credentials and configuration parameters are stored in the `.env` 
 - Initial seed scripts can be placed inside `mongo-init/` folder.
 
  ## test mongodb
-    - docker exec -it askdata-mongodb mongosh -u root -p example --authenticationDatabase admin
-    - use askdata_db
+    - docker exec -it mongodb mongosh -u root -p example --authenticationDatabase admin
+    - use askdata_mongo
     - show collections
      -db.questions.find().pretty()
      - exit

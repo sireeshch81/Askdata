@@ -105,6 +105,8 @@ services:
   mongodb:
     image: mongo:6.0
     container_name: askdata-mongodb
+    networks:
+      - app-network
     ports:
       - "27017:27017"
     environment:
@@ -114,7 +116,7 @@ services:
       - ./mongo-init:/docker-entrypoint-initdb.d
       - mongo-data:/data/db
      # - ./.env:/app/.env
-    restart: unless-stopped
+#    restart: unless-stopped
     
   etl-services:
     container_name: askdata-etl-services
