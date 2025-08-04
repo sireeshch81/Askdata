@@ -4,8 +4,6 @@ import logging
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 
 # Detect if running in Docker vs local development
 if os.path.exists('/app/config/docker_config.py'):
@@ -25,10 +23,7 @@ class DatabaseConnector:
     def __init__(self):
         self.engine = None
         self.current_source = None
-        # MongoDB connection attributes
-        self.mongo_client = None
-        self.mongo_db = None
-
+    
     def connect(self, source='oltp'):
         """Connect to specified database using SQLAlchemy"""
         try:
@@ -42,11 +37,10 @@ class DatabaseConnector:
             
             logger.info(f"✅ Connected to {source.upper()} database")
             return True
-            
         except Exception as e:
             logger.error(f"❌ Database connection failed: {e}")
             return False
-
+    
     def execute_query(self, query: str, params: tuple = None) -> pd.DataFrame:
         """Execute query and return DataFrame using pandas + SQLAlchemy"""
         try:
@@ -64,65 +58,15 @@ class DatabaseConnector:
         except Exception as e:
             logger.error(f"Query execution failed: {e}")
             return pd.DataFrame()
-
+    
     def get_connection(self):
         """Get raw SQLAlchemy connection"""
         if self.engine:
             return self.engine.connect()
         return None
-
-    def connect_mongodb(self, 
-                       host: str = "localhost", 
-                       port: int = 27017, 
-                       database: str = "askdata_mongo",
-                       username: str = None,
-                       password: str = None) -> bool:
-        """Connect to MongoDB with SSL disabled for local development"""
-        try:
-            # Build connection string with SSL disabled
-            if username and password:
-                connection_string = f"mongodb://{username}:{password}@{host}:{port}/{database}?authSource=admin&ssl=false&tlsAllowInvalidCertificates=true"
-            else:
-                connection_string = f"mongodb://{host}:{port}/{database}?ssl=false"
-            
-            self.mongo_client = MongoClient(
-                connection_string, 
-                serverSelectionTimeoutMS=5000,
-                connectTimeoutMS=5000,
-                socketTimeoutMS=5000
-            )
-            
-            # Test connection
-            self.mongo_client.admin.command('ping')
-            self.mongo_db = self.mongo_client[database]
-            
-            logger.info(f"✅ Connected to MongoDB: {host}:{port}/{database}")
-            return True
-            
-        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logger.error(f"❌ Failed to connect to MongoDB: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"❌ Unexpected MongoDB connection error: {e}")
-            return False
-
-    def get_mongo_collection(self, collection_name: str):
-        """Get MongoDB collection"""
-        if not hasattr(self, 'mongo_db') or self.mongo_db is None:
-            raise Exception("MongoDB not connected")
-        return self.mongo_db[collection_name]
-
-    def close_mongodb(self):
-        """Close MongoDB connection"""
-        if hasattr(self, 'mongo_client') and self.mongo_client:
-            self.mongo_client.close()
-            logger.info("MongoDB connection closed")
-
+    
     def close(self):
-        """Close all database connections"""
+        """Close database connection"""
         if self.engine:
             self.engine.dispose()
-            logger.info("MySQL database connection closed")
-        
-        # Close MongoDB connection too
-        self.close_mongodb()
+            logger.info("Database connection closed")
