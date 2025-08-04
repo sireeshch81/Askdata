@@ -35,29 +35,47 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Mongo Connection
-
-
+# Health check endpoint
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 
+# Enhanced customer detail search endpoint
 @app.get("/customer_detail", response_model=List[schemas.CustomerDetail])
 def get_customer_detail(
-    customer_name: str = Query(..., description="Customer name to search for"),
+    customer_name: str = Query(None, description="Customer name to search for (optional)"),
+    email: str = Query(None, description="Email to search for (optional)"),
+    phone: str = Query(None, description="Phone to search for (optional)"),
     db: Session = Depends(get_db),
 ):
-    customers = (
-        db.query(models.Member)
-        .filter(
+    if not any([customer_name, email, phone]):
+        raise HTTPException(status_code=400, detail="At least one search parameter must be provided.")
+
+    query = db.query(models.Member)
+
+    filters = []
+
+    if customer_name:
+        pattern = f"%{customer_name}%"
+        filters.append(
             or_(
-                models.Member.first_name.ilike(f"%{customer_name}%"),
-                models.Member.last_name.ilike(f"%{customer_name}%"),
+                models.Member.first_name.ilike(pattern),
+                models.Member.last_name.ilike(pattern),
+                (models.Member.first_name + " " + models.Member.last_name).ilike(pattern),
             )
         )
-        .all()
-    )
+
+    if email:
+        filters.append(models.Member.email.ilike(f"%{email}%"))
+
+    if phone:
+        filters.append(models.Member.phone.ilike(f"%{phone}%"))
+
+    query = query.filter(or_(*filters))
+
+    customers = query.limit(100).all()  # limit to 100 results
+
     if not customers:
         raise HTTPException(status_code=404, detail="Customers not found")
 
@@ -74,6 +92,7 @@ def get_customer_detail(
     ]
 
 
+# Recommendations endpoint
 @app.get("/recommendations", response_model=schemas.RecommendationsResponse)
 def get_recommendations(
     customer_id: str = Query(..., description="Customer ID to get recommendations for")
@@ -93,12 +112,14 @@ def get_recommendations(
     )
 
 
+# Simple auth endpoint (stub)
 @app.post("/auth", response_model=schemas.AuthResponse)
 def authenticate(
     username: str = Query(..., description="Username for authentication"),
     password: str = Query(..., description="Password for authentication"),
 ):
     if username and password:
+        # Replace with real auth logic
         return schemas.AuthResponse(access_token="stubbed.jwt.token", token_type="bearer")
     else:
         raise HTTPException(status_code=401, detail="Authentication failed")

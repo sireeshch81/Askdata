@@ -8,3 +8,5 @@ streamlit==1.42.0
 python-keycloak
 requests
 PyJWT
+streamlit-aggrid
+pandas
