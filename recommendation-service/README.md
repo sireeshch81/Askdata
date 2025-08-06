@@ -9,25 +9,24 @@ This service generates product recommendations for members and saves them in dua
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- Docker and Docker Compose
+- Python 3.12+
+- ~~Docker and Docker Compose~~
 - MongoDB, OLTP DB, and DW DB running
 
 ### 1. Environment Setup
 ```bash
-# Clone and navigate
-cd ~/projects/askdata-demo/recommendation-service
-
-# Create virtual environment
-python -m venv recommendation-env
-source recommendation-env/bin/activate
+First, starting in the recommendation service directory, create a virtual environment and install the dependencies:
+* python -m venv rec-env
+* . rec-env/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-# Start databases (from project root)
-cd ~/projects/askdata-demo
-docker-compose up -d mongodb oltp-db dw-db
+
+# Start databases (from project root, should already be running, but if not)
+* docker-compose up -d mongodb oltp-db dw-db
+
 # Generate recommendations for specific member
 python src/main.py --member-id 1
+
 # Generate recommendations for ALL active members (~1,900 members)
 python src/main.py --source oltp --batch-size 100

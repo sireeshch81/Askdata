@@ -147,34 +147,34 @@ services:
       - app-network
 
   # Product Recommendation Service
-  recommendation-service:
-    container_name: askdata-recommendation-service
-    build:
-      context: ./recommendation-service
-      dockerfile: Dockerfile
-    depends_on:
-      - oltp-db
-      - dw-db
-    environment:
-      - PYTHONPATH=/app
-      - MYSQL_OLTP_USER=${MYSQL_OLTP_USER}
-      - MYSQL_OLTP_PASSWORD=${MYSQL_OLTP_PASSWORD}
-      - MYSQL_OLTP_HOST=${MYSQL_OLTP_HOST}
-      - MYSQL_OLTP_PORT=${MYSQL_OLTP_PORT}
-      - MYSQL_OLTP_DATABASE=${MYSQL_OLTP_DATABASE}
-      - MYSQL_DW_USER=${MYSQL_DW_USER}
-      - MYSQL_DW_PASSWORD=${MYSQL_DW_PASSWORD}
-      - MYSQL_DW_HOST=${MYSQL_DW_HOST}
-      - MYSQL_DW_PORT=${MYSQL_DW_PORT}
-      - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
-    volumes:
-      - ./recommendation-service/output:/app/output
-      - ./.env:/app/.env
-    ports:
-      - "5005:5005"
-    networks:
-      - app-network
-    command: ["python3", "src/main.py", "--source", "oltp", "--batch-size", "100"]
+#  recommendation-service:
+#    container_name: askdata-recommendation-service
+#    build:
+#      context: ./recommendation-service
+#      dockerfile: Dockerfile
+#    depends_on:
+#      - oltp-db
+#      - dw-db
+#    environment:
+#      - PYTHONPATH=/app
+#      - MYSQL_OLTP_USER=${MYSQL_OLTP_USER}
+#      - MYSQL_OLTP_PASSWORD=${MYSQL_OLTP_PASSWORD}
+#      - MYSQL_OLTP_HOST=${MYSQL_OLTP_HOST}
+#      - MYSQL_OLTP_PORT=${MYSQL_OLTP_PORT}
+#      - MYSQL_OLTP_DATABASE=${MYSQL_OLTP_DATABASE}
+#      - MYSQL_DW_USER=${MYSQL_DW_USER}
+#      - MYSQL_DW_PASSWORD=${MYSQL_DW_PASSWORD}
+#      - MYSQL_DW_HOST=${MYSQL_DW_HOST}
+#      - MYSQL_DW_PORT=${MYSQL_DW_PORT}
+#      - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
+#    volumes:
+#      - ./recommendation-service/output:/app/output
+#      - ./.env:/app/.env
+#    ports:
+#      - "5005:5005"
+#    networks:
+#      - app-network
+#    command: ["python3", "src/main.py", "--source", "oltp", "--batch-size", "100"]
 
   # Ollama service for AI model serving
   ollama:
