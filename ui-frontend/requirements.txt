@@ -10,3 +10,4 @@ requests
 PyJWT
 streamlit-aggrid
 pandas
+pymongo

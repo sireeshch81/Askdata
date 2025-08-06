@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import time
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -30,22 +31,29 @@ class DatabaseConnector:
         self.mongo_db = None
 
     def connect(self, source='oltp'):
-        """Connect to specified database using SQLAlchemy"""
-        try:
-            database_url = OLTP_DATABASE_URL if source == 'oltp' else DW_DATABASE_URL
-            self.engine = create_engine(database_url)
-            self.current_source = source
-            
-            # Test connection
-            with self.engine.connect() as conn:
-                pass
-            
-            logger.info(f"✅ Connected to {source.upper()} database")
-            return True
-            
-        except Exception as e:
-            logger.error(f"❌ Database connection failed: {e}")
-            return False
+        """Connect to specified database using SQLAlchemy with retry logic"""
+        database_url = OLTP_DATABASE_URL if source == 'oltp' else DW_DATABASE_URL
+        max_retries = 5
+        retry_delay = 5  # seconds
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                self.engine = create_engine(database_url)
+                self.current_source = source
+                
+                # Test connection
+                with self.engine.connect() as conn:
+                    pass
+                
+                logger.info(f"✅ Connected to {source.upper()} database on attempt {attempt}")
+                return True
+            except Exception as e:
+                logger.error(f"❌ Database connection failed on attempt {attempt}: {e}")
+                if attempt < max_retries:
+                    time.sleep(retry_delay)
+                else:
+                    logger.error("❌ Exhausted all retries to connect to database.")
+                    return False
 
     def execute_query(self, query: str, params: tuple = None) -> pd.DataFrame:
         """Execute query and return DataFrame using pandas + SQLAlchemy"""
