@@ -146,7 +146,7 @@ def get_recommendation_letter(
         prompt_text = f.read()
 
     # The client gets the API key from the environment variable `GEMINI_API_KEY`.
-    client = genai.Client(api_key="AIzaSyBXdG0nUWgFhrCKOewbUr34RM7_wBz0OCQ")
+    client = genai.Client()
 
     response = client.models.generate_content(
         model="gemini-2.5-flash", contents=prompt_text + "\n\n The JSON data file is: \n" +  json_string,
@@ -159,13 +159,6 @@ def get_recommendation_letter(
     print(response.text)
     return response.text
 
-    # return schemas.RecommendationsResponse(
-    #     customer_id=collection["customer_id"],
-    #     customer_profile=schemas.CustomerProfile(**collection["customer_profile"]),
-    #     recommendations=[schemas.Recommendation(**rec) for rec in collection["recommendations"]],
-    #     created_at=collection["created_at"],
-    #     updated_at=collection["updated_at"]
-    # )
 
 
 # Simple auth endpoint (stub)
