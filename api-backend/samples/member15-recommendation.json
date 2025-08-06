@@ -1,0 +1,10 @@
+[
+  {
+    "_id": {"$oid": "6892a67e40c1977c7118e00e"},
+    "created_at": "2025-08-05T19:48:44.744180",
+    "customer_id": "15",
+    "customer_profile": "{name=Member 15, annual_income=77540.0, credit_score=643, health_score=100.0, risk_category=low, utilization_ratio=0.0}",
+    "recommendations": "[{rank=1, product_name=Secured Starter Card, product_type=credit_card, score=100.0, max_score=100.0, confidence=100.0, reason=high income; low credit utilization; excellent payment history}, {rank=2, product_name=Student Card, product_type=credit_card, score=100.0, max_score=100.0, confidence=100.0, reason=low credit utilization; excellent payment history; low financial risk}, {rank=3, product_name=Gas Rewards Card, product_type=credit_card, score=100.0, max_score=100.0, confidence=100.0, reason=high income; low credit utilization; excellent payment history}, {rank=4, product_name=Auto Loan, product_type=personal_loan, score=100.0, max_score=100.0, confidence=100.0, reason=strong income; low credit utilization; excellent payment history}, {rank=5, product_name=High-Yield Savings, product_type=savings_account, score=100.0, max_score=100.0, confidence=100.0, reason=high income; low credit utilization; excellent payment history}]",
+    "updated_at": "2025-08-05T19:48:44.744180"
+  }
+]

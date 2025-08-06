@@ -5,11 +5,14 @@ from sqlalchemy import or_
 from datetime import datetime
 import logging
 from typing import List
-
+import json
 from database import get_db
 import models
 import schemas
 from RecommendationDataManager import RecommendationDataManager
+from google import genai
+from google.genai import types
+
 # from auth import authenticate_user, create_access_token
 
 # Logging setup
@@ -110,6 +113,59 @@ def get_recommendations(
         created_at=collection["created_at"],
         updated_at=collection["updated_at"]
     )
+
+# Recommendation Letter Endpoint
+@app.get("/recommendation_letter", response_model=str)
+def get_recommendation_letter(
+    customer_id: str = Query(..., description="Customer ID to get recommendations for"),
+    db: Session = Depends(get_db),
+):
+    recommendation_manager = RecommendationDataManager()
+    collection = recommendation_manager.find_by_customer_id(customer_id)
+
+    if not collection:
+        raise HTTPException(status_code=404, detail="Recommendations not found for this customer.")
+
+    try:
+        member_id_int = int(customer_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid customer ID format.")
+
+    member = db.query(models.Member).filter(models.Member.member_id == member_id_int).first()
+
+    if not member:
+        raise HTTPException(status_code=404, detail="Customer not found in database.")
+
+    # Add full name to the customer profile
+    collection["customer_profile"]["name"] = f"{member.first_name} {member.last_name}"
+
+    # Convert MongoDB document to JSON string
+    json_string = json.dumps(collection, default=str)
+
+    with open("prompts/recommendation-letter-prompt.txt", "r") as f:
+        prompt_text = f.read()
+
+    # The client gets the API key from the environment variable `GEMINI_API_KEY`.
+    client = genai.Client(api_key="AIzaSyBXdG0nUWgFhrCKOewbUr34RM7_wBz0OCQ")
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash", contents=prompt_text + "\n\n The JSON data file is: \n" +  json_string,
+        config=types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0)  # Disables thinking
+        ),
+
+    )
+
+    print(response.text)
+    return response.text
+
+    # return schemas.RecommendationsResponse(
+    #     customer_id=collection["customer_id"],
+    #     customer_profile=schemas.CustomerProfile(**collection["customer_profile"]),
+    #     recommendations=[schemas.Recommendation(**rec) for rec in collection["recommendations"]],
+    #     created_at=collection["created_at"],
+    #     updated_at=collection["updated_at"]
+    # )
 
 
 # Simple auth endpoint (stub)
