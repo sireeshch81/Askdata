@@ -111,6 +111,39 @@ def get_recommendations(
         updated_at=collection["updated_at"]
     )
 
+# Recommendation Letter Endpoint
+@app.get("/recommendation_letter", response_model=schemas.RecommendationsResponse)
+def get_recommendation_letter(
+    customer_id: str = Query(..., description="Customer ID to get recommendations for"),
+    db: Session = Depends(get_db),
+):
+    recommendation_manager = RecommendationDataManager()
+    collection = recommendation_manager.find_by_customer_id(customer_id)
+
+    if not collection:
+        raise HTTPException(status_code=404, detail="Recommendations not found for this customer.")
+
+    try:
+        member_id_int = int(customer_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid customer ID format.")
+
+    member = db.query(models.Member).filter(models.Member.member_id == member_id_int).first()
+
+    if not member:
+        raise HTTPException(status_code=404, detail="Customer not found in database.")
+
+    # Add full name to the customer profile
+    collection["customer_profile"]["name"] = f"{member.first_name} {member.last_name}"
+
+    return schemas.RecommendationsResponse(
+        customer_id=collection["customer_id"],
+        customer_profile=schemas.CustomerProfile(**collection["customer_profile"]),
+        recommendations=[schemas.Recommendation(**rec) for rec in collection["recommendations"]],
+        created_at=collection["created_at"],
+        updated_at=collection["updated_at"]
+    )
+
 
 # Simple auth endpoint (stub)
 @app.post("/auth", response_model=schemas.AuthResponse)
