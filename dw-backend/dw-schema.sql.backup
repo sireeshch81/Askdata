@@ -105,21 +105,6 @@ CREATE TABLE dim_payment_method (
     convenience_score INT -- Derived: 1-5 scale
 );
 
--- ETL_JOB_AUDIT_LOG - ETL operations tracking table
-CREATE TABLE etl_job_audit_log (
-    audit_id INT PRIMARY KEY AUTO_INCREMENT,
-    job_name VARCHAR(100) NOT NULL,
-    source_table VARCHAR(100),
-    target_table VARCHAR(100),
-    status VARCHAR(50) NOT NULL,
-    start_time DATETIME NOT NULL,
-    end_time DATETIME,
-    records_read INT DEFAULT 0,
-    records_written INT DEFAULT 0,
-    duration_seconds INT,
-    error_message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
 -- Facts
 -- FACT_PAYMENT - Payment transactions fact table
@@ -129,18 +114,18 @@ CREATE TABLE fact_payment (
     card_key INT NOT NULL,
     payment_date_key INT NOT NULL,
     payment_method_key INT NOT NULL,
-
+    
     -- Measures
     payment_amount DECIMAL(10,2) NOT NULL,
     minimum_due DECIMAL(10,2) NOT NULL,
     statement_balance DECIMAL(10,2),
     late_fee DECIMAL(6,2) DEFAULT 0.00,
     days_late INT DEFAULT 0,
-
+    
     -- Derived measures
     payment_ratio DECIMAL(5,4), -- payment_amount / minimum_due
     excess_payment DECIMAL(10,2), -- payment_amount - minimum_due
-
+    
     -- Flags
     is_on_time BOOLEAN,
     is_full_payment BOOLEAN, -- payment >= statement_balance
@@ -150,9 +135,9 @@ CREATE TABLE fact_payment (
     -- Performance Opty in MySQL, but not in PostgreSQL, defaulting to supported
     -- ENUM('on_time', 'late', 'missed', 'partial')
     payment_status CHAR(10) NOT NULL,
-
+    
     created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+    
     FOREIGN KEY (member_key) REFERENCES dim_member(member_key),
     FOREIGN KEY (card_key) REFERENCES dim_credit_card(card_key),
     FOREIGN KEY (payment_date_key) REFERENCES dim_date(date_key),
@@ -164,7 +149,7 @@ CREATE TABLE fact_financial_health (
     health_key INT PRIMARY KEY AUTO_INCREMENT,
     member_key INT NOT NULL,
     assessment_date_key INT NOT NULL,
-
+    
     -- Measures
     credit_score INT,
     debt_to_income_ratio DECIMAL(5,4),
@@ -177,20 +162,20 @@ CREATE TABLE fact_financial_health (
     recent_inquiries INT,
     delinquent_accounts INT,
     health_score DECIMAL(5,2),
-
+    
     -- Derived measures
     total_liquid_assets DECIMAL(12,2), -- savings + checking
     debt_to_assets_ratio DECIMAL(5,4), -- total_debt / total_liquid_assets
     net_worth DECIMAL(12,2), -- total_liquid_assets - total_debt
-
+    
     -- Categorical measures
     -- ENUM('low', 'medium', 'high')
     risk_category CHAR(10),
     credit_score_tier CHAR(12), -- Derived: 'Excellent', 'Good', 'Fair', 'Poor'
     utilization_tier CHAR(12), -- Derived: 'Low', 'Medium', 'High', 'Maxed'
-
+    
     created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+    
     FOREIGN KEY (member_key) REFERENCES dim_member(member_key),
     FOREIGN KEY (assessment_date_key) REFERENCES dim_date(date_key)
 );
@@ -202,27 +187,27 @@ CREATE TABLE fact_product_recommendation (
     product_key INT NOT NULL,
     recommendation_date_key INT NOT NULL,
     expires_date_key INT,
-
+    
     -- Measures
     recommendation_score DECIMAL(5,2),
     member_health_score DECIMAL(5,2),
     credit_utilization_at_time DECIMAL(5,4),
     payment_reliability_at_time DECIMAL(5,2),
-
+    
     -- Derived measures
     recommendation_tier CHAR(20), -- Derived from score: 'High', 'Medium', 'Low'
     days_to_expiry INT, -- Calculated from expires_at
-
+    
     -- Flags
     is_expired BOOLEAN,
     is_high_confidence BOOLEAN, -- recommendation_score > 80
 
     -- ENUM('pending', 'accepted', 'declined', 'expired')
     recommendation_status CHAR(10),
-
+    
     created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
+    
     FOREIGN KEY (member_key) REFERENCES dim_member(member_key),
     FOREIGN KEY (product_key) REFERENCES dim_financial_product(product_key),
     FOREIGN KEY (recommendation_date_key) REFERENCES dim_date(date_key),
@@ -235,25 +220,25 @@ CREATE TABLE fact_credit_card_balance (
     member_key INT NOT NULL,
     card_key INT NOT NULL,
     snapshot_date_key INT NOT NULL,
-
+    
     -- Measures
     credit_limit DECIMAL(10,2),
     current_balance DECIMAL(10,2),
     available_credit DECIMAL(10,2),
     minimum_payment DECIMAL(8,2),
-
+    
     -- Derived measures
     utilization_ratio DECIMAL(5,4), -- current_balance / credit_limit
     utilization_tier CHAR(12), -- Derived: 'Low', 'Medium', 'High', 'Maxed'
     balance_trend CHAR(20), -- Derived: 'Increasing', 'Decreasing', 'Stable'
-
+    
     -- Flags
     is_over_limit BOOLEAN,
     is_high_utilization BOOLEAN, -- > 80%
     is_maxed_out BOOLEAN, -- > 95%
-
+    
     created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+    
     FOREIGN KEY (member_key) REFERENCES dim_member(member_key),
     FOREIGN KEY (card_key) REFERENCES dim_credit_card(card_key),
     FOREIGN KEY (snapshot_date_key) REFERENCES dim_date(date_key)
@@ -270,10 +255,6 @@ CREATE INDEX idx_dim_card_type ON dim_credit_card(card_type);
 CREATE INDEX idx_dim_product_type ON dim_financial_product(product_type);
 CREATE INDEX idx_dim_date_year_month ON dim_date(year, month_number);
 
--- Audit table indexes
-CREATE INDEX idx_audit_job_status ON etl_job_audit_log(job_name, status);
-CREATE INDEX idx_audit_start_time ON etl_job_audit_log(start_time);
-
 -- Fact table indexes
 CREATE INDEX idx_fact_payment_member_date ON fact_payment(member_key, payment_date_key);
 CREATE INDEX idx_fact_payment_card_date ON fact_payment(card_key, payment_date_key);
@@ -288,7 +269,7 @@ CREATE INDEX idx_fact_balance_card_date ON fact_credit_card_balance(card_key, sn
 -- Views for analytical queries
 -- Member payment behavior summary
 CREATE VIEW vw_member_payment_summary AS
-SELECT
+SELECT 
     dm.member_id,
     dm.first_name,
     dm.last_name,
@@ -306,7 +287,7 @@ GROUP BY dm.member_key, dm.member_id, dm.first_name, dm.last_name, dm.income_bra
 
 -- Product recommendation success rate
 CREATE VIEW vw_product_recommendation_metrics AS
-SELECT
+SELECT 
     dp.product_name,
     dp.product_type,
     dp.product_category,
@@ -320,7 +301,7 @@ GROUP BY dp.product_key, dp.product_name, dp.product_type, dp.product_category;
 
 -- Member financial health trends
 CREATE VIEW vw_member_health_trends AS
-SELECT
+SELECT 
     dm.member_id,
     dm.first_name,
     dm.last_name,
