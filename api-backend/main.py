@@ -146,7 +146,7 @@ def get_recommendation_letter(
         prompt_text = f.read()
 
     # The client gets the API key from the environment variable `GEMINI_API_KEY`.
-    client = genai.Client()
+    client = genai.Client(api_key="AIzaSyBXdG0nUWgFhrCKOewbUr34RM7_wBz0OCQ")
 
     response = client.models.generate_content(
         model="gemini-2.5-flash", contents=prompt_text + "\n\n The JSON data file is: \n" +  json_string,
