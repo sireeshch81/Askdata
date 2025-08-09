@@ -212,3 +212,4 @@ __pycache__/
 *.pyc
 .venv/
 etl-services/.venv/
+.DS_Store
