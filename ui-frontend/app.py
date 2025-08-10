@@ -228,6 +228,31 @@ st.markdown(
     box-shadow: 0 4px 14px rgba(178,34,34,0.25);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+.offer-customer-button-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+.offer-customer-button {
+    background-color: #b22222;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 16px;
+    user-select: none;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 10px rgba(178, 34, 34, 0.6);
+    white-space: nowrap;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.offer-customer-button:hover {
+    background-color: #7f1616;
+    box-shadow: 0 6px 15px rgba(127, 22, 22, 0.9);
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -334,6 +359,34 @@ def show_user_info_and_logout(user_info, button_key="logout_button"):
     )
     st.markdown("</div>", unsafe_allow_html=True)
     return logout_clicked
+
+
+# --- API Functions ---
+def offer_customer(customer_id: int):
+    """
+    Call the dw-backend API to offer customer products
+    """
+    try:
+        response = requests.post(
+            f"http://dw-backend:5002/offer-customer",
+            json={"customer_id": customer_id},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            st.success(f"✅ Offer successfully created for customer {customer_id}")
+            return result
+        else:
+            st.error(f"❌ Failed to create offer for customer {customer_id}. Status: {response.status_code}")
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Error connecting to dw-backend API: {str(e)}")
+        return None
+    except Exception as e:
+        st.error(f"❌ Unexpected error: {str(e)}")
+        return None
 
 
 # --- MongoDB Connection ---
@@ -791,6 +844,21 @@ def customer_details_tab():
     if st.button("⬅️ Back to Search", key="back_button_from_details"):
         st.session_state["page"] = "search_customer"
         st.rerun()
+    
+    # Add Offer Customer button at bottom right using Streamlit columns
+    st.markdown("<br><br><br><br>", unsafe_allow_html=True)  # Add some spacing
+    
+    # Create a container for the bottom right button
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col3:
+        if st.button("🎯 Offer Customer", 
+                    key=f"offer_customer_{customer_id}", 
+                    help="Create offer for this customer",
+                    use_container_width=True):
+            result = offer_customer(customer_id)
+            if result:
+                st.success(f"✅ Offer created successfully for customer {customer_id}!")
+                st.info("Check the dw-backend for offer details.")
 
 
 # --- Product Search Tab (Placeholder) ---
@@ -1079,3 +1147,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

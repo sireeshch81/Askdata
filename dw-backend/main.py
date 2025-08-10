@@ -6,6 +6,9 @@ from typing import List, Optional
 import logging
 import math
 from datetime import date, datetime
+from mongodb import save_offer, get_recommendations
+from llm_client import generate_recommendation_letter
+
 
 from database import get_db, engine
 import models
@@ -510,6 +513,113 @@ def get_credit_card_balances(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error getting credit card balances: {str(e)}"
+        )
+
+@app.get("/credit-card-balances/{balance_key}", response_model=schemas.CreditCardBalance)
+def get_credit_card_balance(balance_key: int, db: Session = Depends(get_db)):
+    try:
+        balance = db.query(models.FactCreditCardBalance).filter(
+            models.FactCreditCardBalance.balance_key == balance_key
+        ).first()
+        
+        if not balance:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Credit card balance with key {balance_key} not found"
+            )
+        
+        return balance
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting credit card balance {balance_key}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting credit card balance: {str(e)}"
+        )
+
+@app.post("/offer-customer", response_model=schemas.OfferCustomerResponse)
+def offer_customer(request: schemas.OfferCustomerRequest, db: Session = Depends(get_db)):
+    """
+    Create an offer for a customer based on their profile and recommendations
+    """
+    try:
+        customer_id = request.customer_id
+        
+        # Check if customer exists
+        customer = db.query(models.DimMember).filter(
+            models.DimMember.member_id == customer_id
+        ).first()
+        
+        # if not customer:
+        #     raise HTTPException(
+        #         status_code=status.HTTP_404_NOT_FOUND,
+        #         detail=f"Customer with ID {customer_id} not found"
+        #     )
+        
+        # # Get customer's financial health
+        # health = db.query(models.FactFinancialHealth).filter(
+        #     models.FactFinancialHealth.member_key == customer_id
+        # ).order_by(models.FactFinancialHealth.assessment_date_key.desc()).first()
+        
+        # # Get customer's recommendations
+        # recommendations = db.query(models.FactProductRecommendation).filter(
+        #     models.FactProductRecommendation.member_key == customer_id,
+        #     models.FactProductRecommendation.recommendation_status == "pending"
+        # ).all()
+        
+        # Generate offer ID (simple implementation)
+        import uuid
+        offer_id = str(uuid.uuid4())[:8].upper()
+
+        # Save offer to MongoDB
+        # save_offer(offer_id, {
+        #     "customer_id": customer_id,
+        #     "offer_id": offer_id,
+        #     "status": "created",
+        #     "message": f"Offer created successfully for customer {customer.first_name} {customer.last_name}",
+        #     "created_at": datetime.now()
+        # })
+
+        # Get customer's recommendations and financial health
+        customer_data = get_recommendations(customer_id)
+
+        # Generate recommendation letter
+        recommendation_letter = generate_recommendation_letter(customer_data,offer_id)
+
+        # Save recommendation letter to text file
+        with open(f"recommendation_letters/{offer_id}.txt", "w") as f:
+            f.write(recommendation_letter)
+
+        # Save offer to MongoDB
+        save_offer(offer_id, {
+            "customer_id": customer_id,
+            "offer_id": offer_id,
+            "status": "created",
+            "message": f"Offer created successfully for customer {customer.first_name} {customer.last_name}",
+            "created_at": datetime.now()
+        })
+        
+        # Create offer response
+        offer_response = schemas.OfferCustomerResponse(
+            customer_id=customer_id,
+            offer_id=offer_id,
+            status="created",
+            message=f"Offer created successfully for customer {customer.first_name} {customer.last_name}",
+            created_at=datetime.now()
+        )
+        
+        logger.info(f"Offer created for customer {customer_id} with offer ID {offer_id}")
+        
+        return offer_response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating offer for customer {request.customer_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating offer: {str(e)}"
         )
 
 if __name__ == "__main__":
