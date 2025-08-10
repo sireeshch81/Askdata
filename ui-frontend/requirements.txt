@@ -11,3 +11,4 @@ PyJWT
 streamlit-aggrid
 pandas
 pymongo
+matplotlib
