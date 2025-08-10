@@ -291,6 +291,54 @@ services:
     networks:
       - app-network
 
+
+  # ML Recommendation Service (ADD THIS RIGHT BEFORE volumes: section)
+  recommendation-service:
+    container_name: askdata-recommendation-service
+    build:
+      context: ./recommendation-service
+      dockerfile: Dockerfile
+    depends_on:
+      - oltp-db
+      - dw-db
+      - mongodb
+    environment:
+      - PYTHONPATH=/app
+      # OLTP Database Connection
+      - MYSQL_OLTP_USER=${MYSQL_OLTP_USER}
+      - MYSQL_OLTP_PASSWORD=${MYSQL_OLTP_PASSWORD}
+      - MYSQL_OLTP_HOST=${MYSQL_OLTP_HOST}
+      - MYSQL_OLTP_PORT=${MYSQL_OLTP_PORT}
+      - MYSQL_OLTP_DATABASE=${MYSQL_OLTP_DATABASE}
+      # Data Warehouse Connection
+      - MYSQL_DW_USER=${MYSQL_DW_USER}
+      - MYSQL_DW_PASSWORD=${MYSQL_DW_PASSWORD}
+      - MYSQL_DW_HOST=${MYSQL_DW_HOST}
+      - MYSQL_DW_PORT=${MYSQL_DW_PORT}
+      - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
+      # MongoDB Connection
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT}
+      - MONGO_DATABASE=${MONGO_DATABASE}
+      # ML Configuration
+      - ML_SAMPLE_SIZE=${ML_SAMPLE_SIZE:-200}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - MAX_WORKERS=${MAX_WORKERS:-4}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./recommendation-service/src:/app/src
+      - ./recommendation-service/config:/app/config
+      - ./recommendation-service/logs:/app/logs
+      - ./.env:/app/.env
+    ports:
+      - "5005:5005"
+    networks:
+      - app-network
+    # Default command: Run ML batch processing
+    command: ["python", "-m", "src.recommendation_engine.ml_batch_runner", "--mode", "full", "--limit", "100"]
+
 volumes:
   mongo-data:
   ollama_data:
@@ -302,3 +350,5 @@ volumes:
 networks:
   app-network:
     driver: bridge
+
+
