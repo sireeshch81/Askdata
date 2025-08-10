@@ -426,6 +426,22 @@ class MemberHealthTrend(BaseModel):
     avg_credit_score: int
     avg_debt_to_income: Decimal
     avg_credit_utilization: Decimal
+    
+    class Config:
+        from_attributes = True
 
+class OfferCustomerRequest(BaseModel):
+    customer_id: int
+    
+    class Config:
+        from_attributes = True
+
+class OfferCustomerResponse(BaseModel):
+    customer_id: int
+    offer_id: str
+    status: str
+    message: str
+    created_at: datetime
+    
     class Config:
         from_attributes = True
