@@ -419,15 +419,23 @@ def manual_customer_search():
                         st.session_state["manual_search_results"] = customers
                         st.session_state["selected_customer"] = None
                     else:
-                        st.info("No customers matched your search criteria.")
+                        st.info(
+                            "⚠️ No customers matched your search criteria. Please try different filters or check for typos."
+                        )
                         st.session_state["manual_search_results"] = []
                         st.session_state["selected_customer"] = None
                 else:
                     detail = response.json().get("detail", "")
-                    st.error(f"Error: {detail or 'Unknown error'}")
+                    if detail.lower() == "customers not found":
+                        st.warning(
+                            "⚠️ No customers matched your search criteria. Please try different filters or check for typos."
+                        )
+                        st.session_state["manual_search_results"] = []
+                        st.session_state["selected_customer"] = None
+                    else:
+                        st.error(f"Error: {detail or 'Unknown error'}")
             except Exception as e:
                 st.error(f"Failed to fetch data: {e}")
-
 
 # --- NLP Customer Search ---
 def nlp_customer_search():
@@ -461,7 +469,7 @@ def nlp_customer_search():
                         st.session_state.pop("nlp_search_results", None)
                         st.session_state["selected_customer"] = None
                     else:
-                        st.error("No SQL query returned from backend.")
+                        st.info("⚠️ No SQL query returned from backend.")
                         st.session_state.pop("generated_sql", None)
                         st.session_state.pop("nlp_search_results", None)
                         st.session_state["selected_customer"] = None
@@ -501,14 +509,15 @@ def nlp_customer_search():
                             st.session_state["nlp_search_results"] = results
                             st.session_state["selected_customer"] = None
                         else:
-                            st.info("No results returned from query.")
+                            st.warning(
+                                "⚠️ No customers matched your search criteria. Please try different filters or check for typos."
+                            )
                             st.session_state["nlp_search_results"] = []
                             st.session_state["selected_customer"] = None
                     except Exception as e:
                         st.error(f"Error running SQL query: {e}")
                         st.session_state.pop("nlp_search_results", None)
                         st.session_state["selected_customer"] = None
-
 
 # --- Display Search Results (manual or NLP) ---
 def display_search_results(mode="manual"):
