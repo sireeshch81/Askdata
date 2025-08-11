@@ -11,14 +11,14 @@ from streamlit_keycloak import login
 load_dotenv()
 
 # Database connection settings
-UI_USER = os.getenv("UI_USER", "askdata_user")
-UI_PASSWORD = os.getenv("UI_PASSWORD", "askdata_password")
-UI_HOST = os.getenv("UI_HOST", "common-db")
-UI_PORT = os.getenv("UI_PORT", "5432")
-UI_DATABASE = os.getenv("UI_DATABASE", "askdata_ui")
+MYSQL_UI_USER = os.getenv("MYSQL_UI_USER", "root")
+MYSQL_UI_PASSWORD = os.getenv("MYSQL_UI_ROOT_PASSWORD", "password")
+MYSQL_UI_HOST = os.getenv("MYSQL_UI_HOST", "db")
+MYSQL_UI_PORT = os.getenv("MYSQL_UI_PORT", "3306")
+MYSQL_UI_DATABASE = os.getenv("MYSQL_UI_DATABASE", "mydb")
 
 # Create SQLAlchemy database URL
-DB_URL = f"postgresql+psycopg2://{UI_USER}:{UI_PASSWORD}@{UI_HOST}:{UI_PORT}/{UI_DATABASE}"
+DB_URL = f"mysql+mysqlconnector://{MYSQL_UI_USER}:{MYSQL_UI_PASSWORD}@{MYSQL_UI_HOST}:{MYSQL_UI_PORT}/{MYSQL_UI_DATABASE}"
 
 
 
