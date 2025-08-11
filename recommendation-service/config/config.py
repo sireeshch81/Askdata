@@ -2,24 +2,24 @@ import os
 
 # Database Configuration - UPDATED WITH CORRECT CREDENTIALS
 OLTP_CONFIG = {
-    'host': os.getenv('OLTP_HOST', 'localhost'),
-    'port': int(os.getenv('OLTP_PORT', '3306')),
-    'database': os.getenv('OLTP_DATABASE', 'askdata_oltp'),
-    'user': os.getenv('OLTP_USER', 'askdata_user'),          # Fixed username
-    'password': os.getenv('OLTP_PASSWORD', 'askdata_password') # Fixed password
+    'host': os.getenv('MYSQL_OLTP_HOST', 'localhost'),
+    'port': int(os.getenv('MYSQL_OLTP_PORT', '3306')),
+    'database': os.getenv('MYSQL_OLTP_DATABASE', 'askdata_oltp'),
+    'user': os.getenv('MYSQL_OLTP_USER', 'askdata_user'),          # Fixed username
+    'password': os.getenv('MYSQL_OLTP_PASSWORD', 'askdata_password') # Fixed password
 }
 
 DW_CONFIG = {
-    'host': os.getenv('DW_HOST', 'localhost'),
-    'port': int(os.getenv('DW_PORT', '3306')),
-    'database': os.getenv('DW_DATABASE', 'askdata_dw'),
-    'user': os.getenv('DW_USER', 'askdata_dw_user'),        # Fixed username
-    'password': os.getenv('DW_PASSWORD', 'askdata_dw_password') # Fixed password
+    'host': os.getenv('MYSQL_DW_HOST', 'localhost'),
+    'port': int(os.getenv('MYSQL_DW_PORT', '3306')),
+    'database': os.getenv('MYSQL_DW_DATABASE', 'askdata_dw'),
+    'user': os.getenv('MYSQL_DW_USER', 'askdata_dw_user'),        # Fixed username
+    'password': os.getenv('MYSQL_DW_PASSWORD', 'askdata_dw_password') # Fixed password
 }
 
 # SQLAlchemy URLs
-OLTP_DATABASE_URL = f"postgresql+psycopg2://{OLTP_CONFIG['user']}:{OLTP_CONFIG['password']}@{OLTP_CONFIG['host']}:{OLTP_CONFIG['port']}/{OLTP_CONFIG['database']}"
-DW_DATABASE_URL = f"postgresql+psycopg2://{DW_CONFIG['user']}:{DW_CONFIG['password']}@{DW_CONFIG['host']}:{DW_CONFIG['port']}/{DW_CONFIG['database']}"
+OLTP_DATABASE_URL = f"mysql+pymysql://{OLTP_CONFIG['user']}:{OLTP_CONFIG['password']}@{OLTP_CONFIG['host']}:{OLTP_CONFIG['port']}/{OLTP_CONFIG['database']}"
+DW_DATABASE_URL = f"mysql+pymysql://{DW_CONFIG['user']}:{DW_CONFIG['password']}@{DW_CONFIG['host']}:{DW_CONFIG['port']}/{DW_CONFIG['database']}"
 
 # Processing Configuration
 DEFAULT_BATCH_SIZE = 100
