@@ -1,4 +1,0 @@
-langchain
-langchain_openai
-dotenv
-pymongo>=4.0.0
