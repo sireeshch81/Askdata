@@ -22,7 +22,7 @@ llm = ChatOpenAI(
 def load_recommendation_prompt():
     """Load the recommendation letter prompt from file."""
     try:
-        with open("api-backend/prompts/recommendation-letter-prompt.txt", "r") as f:
+        with open("./recommendation-letter-prompt.txt", "r") as f:
             return f.read().strip()
     except FileNotFoundError:
         print("❌ Error: recommendation-letter-prompt.txt not found!")
@@ -67,12 +67,12 @@ Please generate the recommendation letter based on the above instructions and cu
         return f"Error generating recommendation letter: {e}"
 
 # def test_recommendation_letter():
-#     """Test the recommendation letter generation with sample data."""
-#     # Sample customer data (you can replace this with real data)
-# # Generate offer ID (simple implementation)
+    """Test the recommendation letter generation with sample data."""
+    # Sample customer data (you can replace this with real data)
+# Generate offer ID (simple implementation)
 #     import uuid
 #     offer_id = str(uuid.uuid4())[:8].upper()
-
+#
 #     sample_customer_data = {
 #         "customer_profile": {
 #             "name": "John Smith",
@@ -96,7 +96,7 @@ Please generate the recommendation letter based on the above instructions and cu
 #             }
 #         ]
 #     }
-    
+#
 #     print("📝 Generating recommendation letter...")
 #     letter = generate_recommendation_letter(sample_customer_data,offer_id)
 #     print("\n" + "="*50)
@@ -112,7 +112,7 @@ Please generate the recommendation letter based on the above instructions and cu
     
     # Test recommendation letter generation
 #     test_recommendation_letter()
-    
+#
 # except Exception as e:
 #     print(f"❌ Error calling OpenAI API: {e}")
 #     print("Please check your API key and internet connection.")

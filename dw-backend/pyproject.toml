@@ -14,9 +14,11 @@ dependencies = [
     "uv",
     "cryptography",
     "python-dotenv",
+    "pymongo",
+    "langchain",
+    "langchain_openai",
+    "dotenv",
+    "os",
 ]
-
-
-
 
 
