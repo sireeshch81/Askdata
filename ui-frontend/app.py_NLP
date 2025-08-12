@@ -225,31 +225,6 @@ st.markdown(
     box-shadow: 0 4px 14px rgba(178,34,34,0.25);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-.offer-customer-button-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000;
-}
-.offer-customer-button {
-    background-color: #b22222;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 16px;
-    user-select: none;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 4px 10px rgba(178, 34, 34, 0.6);
-    white-space: nowrap;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-.offer-customer-button:hover {
-    background-color: #7f1616;
-    box-shadow: 0 6px 15px rgba(127, 22, 22, 0.9);
-}
 </style>
 """,
     unsafe_allow_html=True,
@@ -358,57 +333,6 @@ def show_user_info_and_logout(user_info, button_key="logout_button"):
     return logout_clicked
 
 
-# --- API Functions ---
-def offer_customer(customer_id: int):
-    """
-    Call the dw-backend API to offer customer products
-    """
-    import time
-    
-    # Retry configuration
-    max_retries = 3
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(
-                f"http://dw-backend:5001/offer-customer",
-                json={"customer_id": customer_id},
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                st.success(f"✅ Offer successfully created for customer {customer_id}")
-                return result
-            else:
-                st.error(f"❌ Failed to create offer for customer {customer_id}. Status: {response.status_code}")
-                return None
-                
-        except requests.exceptions.ConnectionError as e:
-            if "Failed to resolve 'dw-backend'" in str(e):
-                if attempt < max_retries - 1:
-                    st.warning(f"⚠️ dw-backend service not available (attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                    continue
-                else:
-                    st.error(f"❌ dw-backend service is not running or not accessible. Please ensure the service is started.")
-                    st.info("💡 Try running: docker-compose up dw-backend -d")
-                    return None
-            else:
-                st.error(f"❌ Connection error: {str(e)}")
-                return None
-        except requests.exceptions.RequestException as e:
-            st.error(f"❌ Error connecting to dw-backend API: {str(e)}")
-            return None
-        except Exception as e:
-            st.error(f"❌ Unexpected error: {str(e)}")
-            return None
-    
-    return None
-
-
 # --- MongoDB Connection ---
 def get_mongo_client():
     return MongoClient(
@@ -495,23 +419,15 @@ def manual_customer_search():
                         st.session_state["manual_search_results"] = customers
                         st.session_state["selected_customer"] = None
                     else:
-                        st.info(
-                            "⚠️ No customers matched your search criteria. Please try different filters or check for typos."
-                        )
+                        st.info("No customers matched your search criteria.")
                         st.session_state["manual_search_results"] = []
                         st.session_state["selected_customer"] = None
                 else:
                     detail = response.json().get("detail", "")
-                    if detail.lower() == "customers not found":
-                        st.warning(
-                            "⚠️ No customers matched your search criteria. Please try different filters or check for typos."
-                        )
-                        st.session_state["manual_search_results"] = []
-                        st.session_state["selected_customer"] = None
-                    else:
-                        st.error(f"Error: {detail or 'Unknown error'}")
+                    st.error(f"Error: {detail or 'Unknown error'}")
             except Exception as e:
                 st.error(f"Failed to fetch data: {e}")
+
 
 # --- NLP Customer Search ---
 def nlp_customer_search():
@@ -545,7 +461,7 @@ def nlp_customer_search():
                         st.session_state.pop("nlp_search_results", None)
                         st.session_state["selected_customer"] = None
                     else:
-                        st.info("⚠️ No SQL query returned from backend.")
+                        st.error("No SQL query returned from backend.")
                         st.session_state.pop("generated_sql", None)
                         st.session_state.pop("nlp_search_results", None)
                         st.session_state["selected_customer"] = None
@@ -585,15 +501,14 @@ def nlp_customer_search():
                             st.session_state["nlp_search_results"] = results
                             st.session_state["selected_customer"] = None
                         else:
-                            st.warning(
-                                "⚠️ No customers matched your search criteria. Please try different filters or check for typos."
-                            )
+                            st.info("No results returned from query.")
                             st.session_state["nlp_search_results"] = []
                             st.session_state["selected_customer"] = None
                     except Exception as e:
                         st.error(f"Error running SQL query: {e}")
                         st.session_state.pop("nlp_search_results", None)
                         st.session_state["selected_customer"] = None
+
 
 # --- Display Search Results (manual or NLP) ---
 def display_search_results(mode="manual"):
@@ -863,21 +778,6 @@ def customer_details_tab():
     if st.button("⬅️ Back to Search", key="back_button_from_details"):
         st.session_state["page"] = "search_customer"
         st.rerun()
-    
-    # Add Offer Customer button at bottom right using Streamlit columns
-    st.markdown("<br><br><br><br>", unsafe_allow_html=True)  # Add some spacing
-    
-    # Create a container for the bottom right button
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col3:
-        if st.button("🎯 Offer Customer", 
-                    key=f"offer_customer_{customer_id}", 
-                    help="Create offer for this customer",
-                    use_container_width=True):
-            result = offer_customer(customer_id)
-            if result:
-                st.success(f"✅ Offer created successfully for customer {customer_id}!")
-                st.info("Check the dw-backend for offer details.")
 
 
 # --- Product Search Tab (Placeholder) ---
@@ -1101,4 +1001,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

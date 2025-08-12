@@ -44,7 +44,7 @@ RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt && update-ca-cer
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV PYTHONUNBUFFERED=1
-ENV YOUR_API_KEY="AIzaSyBXdG0nUWgFhrCKOewbUr34RM7_wBz0OCQ"
+ENV GEMINI_API_KEY="AIzaSyBXdG0nUWgFhrCKOewbUr34RM7_wBz0OCQ"
 
 RUN apt-get update && apt-get install -y netcat-openbsd \
     && apt-get install -y --no-install-recommends python3-venv curl ca-certificates vim \
