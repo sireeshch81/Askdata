@@ -10,4 +10,4 @@ requests
 PyJWT
 streamlit-aggrid
 pandas
-pymongo
+pymongo>=4.0.0

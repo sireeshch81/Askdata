@@ -357,27 +357,50 @@ def offer_customer(customer_id: int):
     """
     Call the dw-backend API to offer customer products
     """
-    try:
-        response = requests.post(
-            f"http://dw-backend:5002/offer-customer",
-            json={"customer_id": customer_id},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            st.success(f"✅ Offer successfully created for customer {customer_id}")
-            return result
-        else:
-            st.error(f"❌ Failed to create offer for customer {customer_id}. Status: {response.status_code}")
-            return None
+    import time
+    
+    # Retry configuration
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                f"http://dw-backend:5001/offer-customer",
+                json={"customer_id": customer_id},
+                timeout=30
+            )
             
-    except requests.exceptions.RequestException as e:
-        st.error(f"❌ Error connecting to dw-backend API: {str(e)}")
-        return None
-    except Exception as e:
-        st.error(f"❌ Unexpected error: {str(e)}")
-        return None
+            if response.status_code == 200:
+                result = response.json()
+                st.success(f"✅ Offer successfully created for customer {customer_id}")
+                return result
+            else:
+                st.error(f"❌ Failed to create offer for customer {customer_id}. Status: {response.status_code}")
+                return None
+                
+        except requests.exceptions.ConnectionError as e:
+            if "Failed to resolve 'dw-backend'" in str(e):
+                if attempt < max_retries - 1:
+                    st.warning(f"⚠️ dw-backend service not available (attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    st.error(f"❌ dw-backend service is not running or not accessible. Please ensure the service is started.")
+                    st.info("💡 Try running: docker-compose up dw-backend -d")
+                    return None
+            else:
+                st.error(f"❌ Connection error: {str(e)}")
+                return None
+        except requests.exceptions.RequestException as e:
+            st.error(f"❌ Error connecting to dw-backend API: {str(e)}")
+            return None
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}")
+            return None
+    
+    return None
 
 
 # --- MongoDB Connection ---
