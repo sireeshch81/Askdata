@@ -17,7 +17,7 @@ class Member(Base):
     credit_cards = relationship("CreditCard", back_populates="member")
     payments = relationship("PaymentHistory", back_populates="member")
     financial_metrics = relationship("FinancialHealthMetric", back_populates="member")
-    financial_products = relationship("FinancialProduct", back_populates="member")
+    #financial_products = relationship("FinancialProduct", back_populates="member")
 
 
 class CreditCard(Base):
@@ -59,11 +59,22 @@ class FinancialHealthMetric(Base):
 class FinancialProduct(Base):
     __tablename__ = "financial_products"
 
-    product_id = Column(Integer, primary_key=True, index=True)
-    member_id = Column(Integer, ForeignKey("members.member_id"))
-    product_name = Column(String(100))
-    product_type = Column(String(50))
-    start_date = Column(DateTime)
-    end_date = Column(DateTime, nullable=True)
+    product_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    product_name = Column(String(100), nullable=False)
+    product_type = Column(String(50))  # Enum in DB, use String here or SQLAlchemy Enum if you want
+    product_category = Column(String(50))  # Enum in DB, use String here or SQLAlchemy Enum if you want
+    interest_rate = Column(Float(precision=4))
+    credit_limit_min = Column(Float)
+    credit_limit_max = Column(Float)
+    minimum_income_required = Column(Float)
+    minimum_credit_score = Column(Integer)
+    maximum_debt_to_income = Column(Float(precision=4))
+    annual_fee = Column(Float)
+    rewards_program = Column(String(100))
+    benefits = Column(String)  # Use Text if you want: from sqlalchemy import Text
+    eligibility_criteria = Column(String)  # Use Text if you want
+    is_active = Column(Integer)  # tinyint(1) in MySQL; use Boolean if you want: Column(Boolean)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
 
-    member = relationship("Member", back_populates="financial_products")
+    #member = relationship("Member", back_populates="financial_products")

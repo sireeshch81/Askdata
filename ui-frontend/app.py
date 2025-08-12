@@ -1,11 +1,8 @@
 import streamlit as st
 import requests
 import jwt
-import matplotlib.pyplot as plt
-import pandas as pd
 from keycloak import KeycloakOpenID
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-from datetime import datetime
 import pandas as pd
 from pymongo import MongoClient
 
@@ -411,6 +408,21 @@ def get_recommendations_for_customer(customer_id: int):
     return doc
 
 
+def get_customers_for_product(product_name: str):
+    """
+    Fetch customers associated with a given product_id from MongoDB.
+    """
+    client = get_mongo_client()
+    db = client.askdata_mongo
+    collection = db.recommendations  # Adjust collection name if needed
+
+    # Example: Find all customers who have this product_id in their products list
+    customers = list(collection.find({"recommendations.product_name": product_name}))
+    print("Customers for product:", customers)  # <-- Print all customers here
+
+    client.close()
+    return customers
+
 # --- Manual Customer Search ---
 def manual_customer_search():
     customer_name_input = st.session_state.get("customer_name_input", "")
@@ -562,7 +574,6 @@ def nlp_customer_search():
                         response.raise_for_status()
                         results = response.json().get("results", [])
                         if results:
-                            log_query_to_mongo(results)
                             st.session_state["nlp_search_results"] = results
                             st.session_state["selected_customer"] = None
                         else:
@@ -900,7 +911,7 @@ def customer_search_tab():
         nlp_customer_search()
         display_search_results(mode="nlp")
         next_btn_key = "next_button_nlp"
-        display_results_with_chart()
+
     # Next button to go to details page if a customer is selected
     selected_customer = st.session_state.get("selected_customer")
     if selected_customer:
@@ -917,7 +928,6 @@ def customer_search_tab():
             if search_method == "Manual"
             else st.session_state.get("nlp_search_results", [])
         )
-
        # if search_results:
        #     st.info("ℹ️ Please select a customer from the table above to proceed.")
 
@@ -1037,71 +1047,457 @@ def display_search_results(mode="manual"):
         st.session_state["selected_customer"] = None
         # Show info message only if results exist but no selection
         st.info("ℹ️ Please select a customer from the table above to proceed.")
-def display_results_with_chart():
-    col1, col2 = st.columns([2, 1])  
-    with col1:
-        st.write("")
-        st.write("")
 
-    with col2:
-        show_query_processing_bar_chart()
+def manual_product_search():
+    product_name_input = st.session_state.get("product_name_input", "")
+    product_type_input = st.session_state.get("product_type_input", "")
+    product_category_input = st.session_state.get("product_category_input", "")
 
-def show_query_processing_bar_chart():
-    client = get_mongo_client()
-    db = client.askdata_mongo
-    collection = db.nlp_queries  # Update NLP queries collection 
+    with st.form("manual_product_search_form"):
+        cols = st.columns(3)
+        with cols[0]:
+            product_name_input = st.text_input(
+                "Product Name",
+                key="product_name_input",
+                placeholder="e.g. Platinum Credit Card",
+                value=product_name_input,
+            )
+        with cols[1]:
+            product_type_input = st.text_input(
+                "Product Type",
+                key="product_type_input",
+                placeholder="e.g. credit_card, personal_loan",
+                value=product_type_input,
+            )
+        with cols[2]:
+            product_category_input = st.text_input(
+                "Product Category",
+                key="product_category_input",
+                placeholder="e.g. premium, standard",
+                value=product_category_input,
+            )
+        submitted = st.form_submit_button("Search")
 
-    pipeline = [
-        {
-            "$group": {
-                "_id": "$date",
-                "total_queries": {"$sum": "$query_count"}
-            }
-        },
-        {"$sort": {"_id": 1}}
-    ]
+    if submitted:
+        st.session_state["last_product_name"] = product_name_input.strip()
+        st.session_state["last_product_type"] = product_type_input.strip()
+        st.session_state["last_product_category"] = product_category_input.strip()
 
-    results = list(collection.aggregate(pipeline))
+        if not (
+            st.session_state["last_product_name"]
+            or st.session_state["last_product_type"]
+            or st.session_state["last_product_category"]
+        ):
+            st.error("Please enter at least one search criteria.")
+            st.session_state["manual_product_search_results"] = []
+            st.session_state["selected_product"] = None
+        else:
+            try:
+                params = {}
+                if st.session_state["last_product_name"]:
+                    params["product_name"] = st.session_state["last_product_name"]
+                if st.session_state["last_product_type"]:
+                    params["product_type"] = st.session_state["last_product_type"]
+                if st.session_state["last_product_category"]:
+                    params["product_category"] = st.session_state["last_product_category"]
 
-    if not results:
-        st.info("No data available for bar chart.")
-        client.close()
-        return
+                response = requests.get(
+                    "http://askdata-api-backend:5004/products",
+                    params=params,
+                )
+                if response.status_code == 200:
+                    products = response.json()
+                    if products:
+                        st.session_state["manual_product_search_results"] = products
+                        st.session_state["selected_product"] = None
+                    else:
+                        st.info(
+                            "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+                        )
+                        st.session_state["manual_product_search_results"] = []
+                        st.session_state["selected_product"] = None
+                else:
+                    detail = response.json().get("detail", "")
+                    if detail.lower() == "products not found":
+                        st.warning(
+                            "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+                        )
+                        st.session_state["manual_product_search_results"] = []
+                        st.session_state["selected_product"] = None
+                    else:
+                        st.error(f"Error: {detail or 'Unknown error'}")
+            except Exception as e:
+                st.error(f"Failed to fetch data: {e}")
 
-    df = pd.DataFrame(results)
-    df.rename(columns={"_id": "date"}, inplace=True)
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
-
-    fig, ax = plt.subplots(figsize=(3, 2))
-    df['total_queries'].plot(kind='bar', ax=ax, color='skyblue')
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Number of Queries")
-    ax.set_title("NLP Query Processing Volume Over Time", fontsize=10)
-    ax.tick_params(axis='x', labelrotation=45, labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-    st.pyplot(fig)
-    client.close()
-
-def log_query_to_mongo(query_text: str):
-    """
-    Log a user query to MongoDB by incrementing the query_count for the current date.
-    """
-    client = get_mongo_client()
-    db = client.askdata_mongo
-    collection = db.nlp_queries
-
-    today_str = datetime.utcnow().strftime("%Y-%m-%d")
-    collection.update_one(
-        {"date": today_str},
-        {
-            "$inc": {"query_count": 1},
-            "$setOnInsert": {"date": today_str}
-        },
-        upsert=True
+def nlp_product_search():
+    nl_query = st.text_area(
+        "Enter your query in natural language",
+        height=100,
+        placeholder="e.g. Show me premium credit cards with cashback",
+        key="nl_product_query_input",
     )
 
-    client.close()
+    generate_clicked = st.button("Generate SQL", key="generate_product_sql_button")
+
+    if generate_clicked:
+        if not nl_query.strip():
+            st.error("Please enter a natural language query.")
+            st.session_state.pop("generated_product_sql", None)
+            st.session_state.pop("nlp_product_search_results", None)
+            st.session_state["selected_product"] = None
+        else:
+            with st.spinner("Generating SQL..."):
+                try:
+                    response = requests.post(
+                        "http://askdata-api-backend:5004/generate_product_sql",
+                        json={"nl_query": nl_query},
+                    )
+                    response.raise_for_status()
+                    sql_query = response.json().get("sql", "")
+                    if sql_query:
+                        st.session_state["generated_product_sql"] = sql_query
+                        st.success("✅ SQL query generated successfully!")
+                        st.session_state.pop("nlp_product_search_results", None)
+                        st.session_state["selected_product"] = None
+                    else:
+                        st.info("⚠️ No SQL query returned from backend.")
+                        st.session_state.pop("generated_product_sql", None)
+                        st.session_state.pop("nlp_product_search_results", None)
+                        st.session_state["selected_product"] = None
+                except Exception as e:
+                    st.error(f"Error generating SQL: {e}")
+                    st.session_state.pop("generated_product_sql", None)
+                    st.session_state.pop("nlp_product_search_results", None)
+                    st.session_state["selected_product"] = None
+
+    sql_query = st.session_state.get("generated_product_sql", "")
+
+    if sql_query:
+        edited_sql = st.text_area(
+            "Edit SQL if needed",
+            value=sql_query,
+            height=150,
+            key="edited_product_sql_input",
+        )
+
+        run_clicked = st.button("Run SQL", key="run_product_sql_button")
+
+        if run_clicked:
+            if not edited_sql.strip():
+                st.error("SQL query cannot be empty.")
+                st.session_state.pop("nlp_product_search_results", None)
+                st.session_state["selected_product"] = None
+            else:
+                with st.spinner("Running SQL query..."):
+                    try:
+                        response = requests.post(
+                            "http://askdata-api-backend:5004/run_custom_product_query",
+                            json={"sql_query": edited_sql},
+                        )
+                        response.raise_for_status()
+                        results = response.json().get("results", [])
+                        if results:
+                            st.session_state["nlp_product_search_results"] = results
+                            st.session_state["selected_product"] = None
+                        else:
+                            st.warning(
+                                "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+                            )
+                            st.session_state["nlp_product_search_results"] = []
+                            st.session_state["selected_product"] = None
+                    except Exception as e:
+                        st.error(f"Error running SQL query: {e}")
+                        st.session_state.pop("nlp_product_search_results", None)
+                        st.session_state["selected_product"] = None
+
+def display_product_search_results(mode="manual"):
+    if mode == "manual":
+        products = st.session_state.get("manual_product_search_results", [])
+    else:
+        products = st.session_state.get("nlp_product_search_results", [])
+
+    if not products:
+        st.info("No results to display yet. Please perform a search.")
+        return
+
+    df = pd.DataFrame(products)
+    # Define Product ID col fallback
+    product_id_col = "product_id" if "product_id" in df.columns else df.columns[0]
+    product_name_col = "product_name" if "product_name" in df.columns else df.columns[1] if len(df.columns) > 1 else df.columns[0]
+
+    display_cols = [
+        product_id_col,
+        product_name_col,
+        "product_type" if "product_type" in df.columns else None,
+        "product_category" if "product_category" in df.columns else None,
+        "interest_rate" if "interest_rate" in df.columns else None,
+        "credit_limit_min" if "credit_limit_min" in df.columns else None,
+        "credit_limit_max" if "credit_limit_max" in df.columns else None,
+        "minimum_income_required" if "minimum_income_required" in df.columns else None,
+        "minimum_credit_score" if "minimum_credit_score" in df.columns else None,
+        "maximum_debt_to_income" if "maximum_debt_to_income" in df.columns else None,
+        "annual_fee" if "annual_fee" in df.columns else None,
+        "rewards_program" if "rewards_program" in df.columns else None,
+        "benefits" if "benefits" in df.columns else None,
+        "eligibility_criteria" if "eligibility_criteria" in df.columns else None,
+        "is_active" if "is_active" in df.columns else None,
+        "created_at" if "created_at" in df.columns else None,
+        "updated_at" if "updated_at" in df.columns else None,
+    ]
+    display_cols = [col for col in display_cols if col is not None]
+
+    display_df = df[display_cols].rename(
+        columns={
+            product_id_col: "Product ID",
+            product_name_col: "Product Name",
+            "product_type": "Type",
+            "product_category": "Category",
+            "interest_rate": "Interest Rate",
+            "credit_limit_min": "Credit Limit Min",
+            "credit_limit_max": "Credit Limit Max",
+            "minimum_income_required": "Minimum Income Required",
+            "minimum_credit_score": "Minimum Credit Score",
+            "maximum_debt_to_income": "Maximum Debt to Income",
+            "annual_fee": "Annual Fee",
+            "rewards_program": "Rewards Program",
+            "benefits": "Benefits",
+            "eligibility_criteria": "Eligibility Criteria",
+            "is_active": "Active",
+            "created_at": "Created At",
+            "updated_at": "Updated At",
+        }
+    )
+
+    gb = GridOptionsBuilder.from_dataframe(display_df)
+    gb.configure_selection(
+        selection_mode="single",
+        use_checkbox=True,
+        suppressRowClickSelection=True,
+    )
+    gb.configure_pagination(paginationAutoPageSize=True)
+    gb.configure_default_column(
+        editable=False,
+        filter=True,
+        sortable=True,
+        resizable=True,
+        cellStyle=JsCode(
+            """
+            function(params) {
+                if (params.node.isSelected()) {
+                    return {'backgroundColor': '#f7e6ff'};
+                } else if (params.rowIndex % 2 === 0) {
+                    return {'backgroundColor': '#f9f9f9'};
+                }
+            }
+            """
+        ),
+    )
+    gb.configure_column("Product Name", header_name="🏦 Product Name", tooltipField="Product Name")
+    gb.configure_column("Type", header_name="🗂 Type", tooltipField="Type")
+    gb.configure_column("Category", header_name="📦 Category", tooltipField="Category")
+    gb.configure_column("Interest Rate", header_name="💲 Interest Rate", tooltipField="Interest Rate")
+    gb.configure_column("Annual Fee", header_name="💸 Annual Fee", tooltipField="Annual Fee")
+    gb.configure_column("Active", header_name="✅ Active", tooltipField="Active")
+    gb.configure_column("Credit Limit Min", header_name="🔢 Credit Limit Min", tooltipField="Credit Limit Min")
+    gb.configure_column("Credit Limit Max", header_name="🔢 Credit Limit Max", tooltipField="Credit Limit Max")
+    gb.configure_column("Minimum Income Required", header_name="💼 Minimum Income Required", tooltipField="Minimum Income Required")
+    gb.configure_column("Minimum Credit Score", header_name="📊 Minimum Credit Score", tooltipField="Minimum Credit Score")
+    gb.configure_column("Maximum Debt to Income", header_name="📉 Max Debt/Income", tooltipField="Maximum Debt to Income")
+    gb.configure_column("Rewards Program", header_name="🎁 Rewards Program", tooltipField="Rewards Program")
+    gb.configure_column("Benefits", header_name="⭐ Benefits", tooltipField="Benefits")
+    gb.configure_column("Eligibility Criteria", header_name="📝 Eligibility Criteria", tooltipField="Eligibility Criteria")
+    gb.configure_column("Created At", header_name="🕒 Created At", tooltipField="Created At")
+    gb.configure_column("Updated At", header_name="🕒 Updated At", tooltipField="Updated At")
+
+    grid_options = gb.build()
+
+    grid_response = AgGrid(
+        display_df,
+        gridOptions=grid_options,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        theme="material",
+        height=480,
+        fit_columns_on_grid_load=True,
+        allow_unsafe_jscode=True,
+        key=f"aggrid_product_{mode}",
+    )
+
+    selected_rows = grid_response.get("selected_rows")
+    if selected_rows is None:
+        selected_rows = []
+    elif isinstance(selected_rows, pd.DataFrame):
+        selected_rows = selected_rows.to_dict(orient="records")
+
+    if selected_rows:
+        st.session_state["selected_product"] = selected_rows[0]
+        st.success(
+            f"✅ Selected: {selected_rows[0].get('Product Name')} (ID: {selected_rows[0].get('Product ID')})"
+        )
+    else:
+        st.session_state["selected_product"] = None
+        st.info("ℹ️ Please select a product from the table above to proceed.")
+
+
+def product_details_tab():
+    selected_product = st.session_state.get("selected_product")
+    if not selected_product:
+        st.warning("No product selected. Please go back and select a product.")
+        if st.button("Back to Product Search", key="back_to_product_search_from_details"):
+            st.session_state["page"] = "search_product"
+            for key in [
+                "manual_product_search_results",
+                "nlp_product_search_results",
+                "selected_product",
+                "last_product_name",
+                "last_product_type",
+                "last_product_category",
+                "product_name_input",
+                "product_type_input",
+                "product_category_input",
+                "generated_product_sql",
+                "edited_product_sql_input",
+            ]:
+                st.session_state.pop(key, None)
+            st.rerun()
+        return
+
+    product_id = selected_product.get("Product ID") or selected_product.get("product_id")
+
+
+    if product_id is None:
+        st.error("Selected product missing Product ID. Please select again.")
+        return
+
+    card_style = """
+        background: white; 
+        padding: 1rem; 
+        border-radius: 12px; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 14px; 
+        line-height: 1.4;
+        width: 80%;
+        height: auto;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        box-sizing: border-box;
+    """
+
+    content_style = """
+        flex-grow: 1;
+        overflow-wrap: break-word;
+    """
+
+    image_style = """
+        width: 80px;
+        height: 80px;
+        margin-left: 12px;
+        flex-shrink: 0;
+    """
+
+    cols = st.columns([1, 1, 1])
+    with cols[0]:
+        st.markdown(
+            f"""
+            <div style="{card_style}">
+                <div style="{content_style}">
+                    <h3 style="color:#b22222; font-weight: 900; margin-bottom: 0.8rem;">Product Details</h3>
+                    <p><strong>Name:</strong> {selected_product.get('Product Name', 'N/A')} (ID: {product_id})</p>
+                    <p>🗂 <strong>Type:</strong> {selected_product.get('Type', 'N/A')}</p>
+                    <p>📦 <strong>Category:</strong> {selected_product.get('Category', 'N/A')}</p>
+                    <p>💲 <strong>Interest Rate:</strong> {selected_product.get('Interest Rate', 'N/A')}</p>
+                    <p>💸 <strong>Annual Fee:</strong> {selected_product.get('Annual Fee', 'N/A')}</p>
+                    <p>✅ <strong>Active:</strong> {selected_product.get('Active', 'N/A')}</p>
+                </div>
+                <img src="https://img.icons8.com/color/96/bank-cards.png" alt="Product" style="{image_style}"/>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with cols[1]:
+        st.markdown(
+            f"""
+            <div style="{card_style}">
+                <div style="{content_style}">
+                <h3 style="color:#b22222; font-weight: 900; margin-bottom: 0.8rem;">More Info</h3>
+                <p><strong>Credit Limit Min:</strong> {selected_product.get('Credit Limit Min', 'N/A')}</p>
+                <p><strong>Credit Limit Max:</strong> {selected_product.get('Credit Limit Max', 'N/A')}</p>
+                <p><strong>Minimum Income Required:</strong> {selected_product.get('Minimum Income Required', 'N/A')}</p>
+                <p><strong>Minimum Credit Score:</strong> {selected_product.get('Minimum Credit Score', 'N/A')}</p>
+                <p><strong>Maximum Debt to Income:</strong> {selected_product.get('Maximum Debt to Income', 'N/A')}</p>
+                <p><strong>Rewards Program:</strong> {selected_product.get('Rewards Program', 'N/A')}</p>
+                <p><strong>Benefits:</strong> {selected_product.get('Benefits', 'N/A')}</p>
+                <p><strong>Eligibility Criteria:</strong> {selected_product.get('Eligibility Criteria', 'N/A')}</p>
+                <p><strong>Created At:</strong> {selected_product.get('Created At', 'N/A')}</p>
+                <p><strong>Updated At:</strong> {selected_product.get('Updated At', 'N/A')}</p>
+                </div>
+                <img src="https://img.icons8.com/color/96/money-bag.png" alt="Info" style="{image_style}"/>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )  
+    st.markdown(f"## 🏦 Product Details: {selected_product.get('Product Name', 'N/A')} (ID: {product_id})")
+    # Optionally, display all product info as a dict for debugging
+    # st.write(selected_product)
+
+    if st.button("⬅️ Back to Product Search", key="back_button_from_product_details"):
+        st.session_state["page"] = "search_product"
+        st.rerun()
+
+
+def product_search_tab():
+    st.title("🏦 Search Products")
+
+    prev_method = st.session_state.get("product_search_method_prev", "Manual")
+    search_method = st.radio(
+        "Choose search method:",
+        ["Manual", "Natural Language Query"],
+        key="product_search_method",
+        horizontal=True,
+    )
+
+    # Clear results, selections, and generated query on mode change
+    if search_method != prev_method:
+        if search_method == "Manual":
+            st.session_state["nlp_product_search_results"] = []
+            st.session_state.pop("generated_product_sql", None)
+            st.session_state.pop("nl_product_query_input", None)
+        else:
+            st.session_state["manual_product_search_results"] = []
+        st.session_state["selected_product"] = None
+        st.session_state["product_search_method_prev"] = search_method
+        st.rerun()
+
+    # Show search inputs and results based on mode
+    if search_method == "Manual":
+        manual_product_search()
+        display_product_search_results(mode="manual")
+        next_btn_key = "next_button_product_manual"
+    else:
+        nlp_product_search()
+        display_product_search_results(mode="nlp")
+        next_btn_key = "next_button_product_nlp"
+
+    # Next button to go to details page if a product is selected
+    selected_product = st.session_state.get("selected_product")
+    if selected_product:
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("➡️ Next: View Product Details", key=next_btn_key):
+                st.session_state["page"] = "product_details"
+                st.rerun()
+    else:
+        search_results = (
+            st.session_state.get("manual_product_search_results", [])
+            if search_method == "Manual"
+            else st.session_state.get("nlp_product_search_results", [])
+        )
+        # if search_results:
+        #     st.info("ℹ️ Please select a product from the table above
 
 # --- Main app ---
 def main():
@@ -1138,6 +1534,11 @@ def main():
                 customer_details_tab()
             with tabs[1]:
                 product_search_tab()
+        elif page == "product_details":
+            with tabs[0]:
+                customer_search_tab()
+            with tabs[1]:
+                product_details_tab()
         else:
             with tabs[0]:
                 customer_search_tab()
