@@ -35,6 +35,7 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - dw-db
+      - mongodb
     environment:
       - PYTHONPATH=/app
       - MYSQL_DW_USER=${MYSQL_DW_USER}
@@ -42,6 +43,11 @@ services:
       - MYSQL_DW_HOST=${MYSQL_DW_HOST}
       - MYSQL_DW_PORT=${MYSQL_DW_PORT}
       - MYSQL_DW_DATABASE=${MYSQL_DW_DATABASE}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT}
+      - MONGO_DATABASE=${MONGO_DATABASE}
     volumes:
       - ./.env:/app/.env
     ports:

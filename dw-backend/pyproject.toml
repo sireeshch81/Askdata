@@ -18,7 +18,6 @@ dependencies = [
     "langchain",
     "langchain_openai",
     "dotenv",
-    "os",
 ]
 
 

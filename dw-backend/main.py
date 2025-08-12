@@ -584,8 +584,12 @@ def offer_customer(request: schemas.OfferCustomerRequest, db: Session = Depends(
         # Get customer's recommendations and financial health
         customer_data = get_recommendations(customer_id)
 
+        logger.info(f" Customer data for {customer_id} :--> {customer_data}")
+
         # Generate recommendation letter
         recommendation_letter = generate_recommendation_letter(customer_data,offer_id)
+
+        logger.info(f" Recommendation letter for {customer_id} :--> {customer_data}")
 
         # Save recommendation letter to text file
         with open(f"recommendation_letters/{offer_id}.txt", "w") as f:
