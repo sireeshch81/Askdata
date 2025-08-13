@@ -628,10 +628,10 @@ def offer_customer(request: schemas.OfferCustomerRequest):
 
 if __name__ == "__main__":
     print("Starting Data Warehouse API server...")
-    client = TestClient(app)
-    # Test offer_customer endpoint
-    test_request = schemas.OfferCustomerRequest(
-        customer_id="1"
-    )
-    response = client.post("/offer-customer", json=test_request.model_dump())
-    print("Test response:", response.json())
+    # client = TestClient(app)
+    # # Test offer_customer endpoint
+    # test_request = schemas.OfferCustomerRequest(
+    #     customer_id="1"
+    # )
+    # response = client.post("/offer-customer", json=test_request.model_dump())
+    # print("Test response:", response.json())
