@@ -47,7 +47,7 @@ if not GEMINI_API_KEY:
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # Load schema prompt for OLTP from file once at startup
-schema_prompt_path = "prompts/schema_oltp.txt"
+schema_prompt_path = "prompts/sql_prompt.txt"
 try:
     with open(schema_prompt_path, "r") as f:
         SCHEMA_PROMPT_OLTP = f.read()

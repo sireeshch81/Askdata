@@ -8,6 +8,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 from datetime import datetime
 import pandas as pd
 from pymongo import MongoClient
+import hashlib
 
 st.set_page_config(layout="wide")
 
@@ -615,7 +616,14 @@ def nlp_customer_search():
                         st.session_state["selected_customer"] = None
 
 # --- Display Search Results (manual or NLP) ---
+
 def display_search_results(mode="manual"):
+    import hashlib
+    import pandas as pd
+    from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
+    import streamlit as st
+
+    # --- Fetch data from session ---
     if mode == "manual":
         customers = st.session_state.get("manual_search_results", [])
     else:
@@ -626,52 +634,70 @@ def display_search_results(mode="manual"):
         return
 
     df = pd.DataFrame(customers)
-    #st.write(f"DEBUG: Columns in search results: {list(df.columns)}")
 
-    # Define Customer ID col fallback
-    if "customer_id" in df.columns:
-        customer_id_col = "customer_id"
-    elif "member_id" in df.columns:
-        customer_id_col = "member_id"
+    # --- Ensure unique column names to avoid AgGrid / JSON errors ---
+    cols = pd.Series(df.columns)
+    for dup in cols[cols.duplicated()].unique():
+        cols[cols == dup] = [f"{dup}_{i}" if i != 0 else dup for i in range(sum(cols == dup))]
+    df.columns = cols
+
+    # --- Determine display_df based on mode ---
+    if mode == "manual":
+        # --- Manual search: static mapping ---
+        if "customer_id" in df.columns:
+            customer_id_col = "customer_id"
+        elif "member_id" in df.columns:
+            customer_id_col = "member_id"
+        else:
+            customer_id_col = df.columns[0]
+
+        if "first_name" in df.columns and "last_name" in df.columns:
+            df["Name"] = df["first_name"] + " " + df["last_name"]
+            name_col = "Name"
+        elif "Name" in df.columns:
+            name_col = "Name"
+        else:
+            name_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+
+        display_cols = [
+            customer_id_col,
+            name_col,
+            "email" if "email" in df.columns else None,
+            "phone" if "phone" in df.columns else None,
+            "date_of_birth" if "date_of_birth" in df.columns else None,
+        ]
+        display_cols = [col for col in display_cols if col is not None]
+
+        display_df = df[display_cols].rename(
+            columns={
+                customer_id_col: "Customer ID",
+                name_col: "Name",
+                "email": "Email",
+                "phone": "Phone",
+                "date_of_birth": "DOB",
+            }
+        )
     else:
-        customer_id_col = df.columns[0]
+        # --- NLP mode: show all columns as returned by query ---
+        display_df = df.copy()
 
-    # Define Name col fallback
-    if "first_name" in df.columns and "last_name" in df.columns:
-        df["Name"] = df["first_name"] + " " + df["last_name"]
-        name_col = "Name"
-    elif "Name" in df.columns:
-        name_col = "Name"
-    else:
-        name_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+        # Map member_id/customer_id to Customer ID if row-level data
+        if "member_id" in display_df.columns or "customer_id" in display_df.columns:
+            if "Customer ID" not in display_df.columns:
+                if "member_id" in display_df.columns:
+                    display_df["Customer ID"] = display_df["member_id"]
+                else:
+                    display_df["Customer ID"] = display_df["customer_id"]
 
-    display_cols = [
-        customer_id_col,
-        name_col,
-        "email" if "email" in df.columns else None,
-        "phone" if "phone" in df.columns else None,
-        "date_of_birth" if "date_of_birth" in df.columns else None,
-    ]
-    display_cols = [col for col in display_cols if col is not None]
-
-    display_df = df[display_cols].rename(
-        columns={
-            customer_id_col: "Customer ID",
-            name_col: "Name",
-            "email": "Email",
-            "phone": "Phone",
-            "date_of_birth": "DOB",
-        }
-    )
-
-    gb = GridOptionsBuilder.from_dataframe(display_df)  # <--- MAKE SURE THIS IS HERE
-    # Configure grid options (selection, pagination, styles, etc.)
+    # --- AgGrid setup ---
+    gb = GridOptionsBuilder.from_dataframe(display_df)
     gb.configure_selection(
         selection_mode="single",
-        use_checkbox=True,
+        use_checkbox=True if "Customer ID" in display_df.columns else False,
         suppressRowClickSelection=True,
     )
-    gb.configure_pagination(paginationAutoPageSize=True)
+    #gb.configure_pagination(paginationAutoPageSize=True)
+    gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=20)
     gb.configure_default_column(
         editable=False,
         filter=True,
@@ -689,50 +715,183 @@ def display_search_results(mode="manual"):
             """
         ),
     )
-    gb.configure_column("Email", header_name="📧 Email", tooltipField="Email")
-    gb.configure_column("Phone", header_name="📞 Phone", tooltipField="Phone")
-    gb.configure_column(
-        "DOB",
-        header_name="🎂 Date of Birth",
-        type=["dateColumnFilter", "customDateTimeFormat"],
-        valueFormatter=JsCode(
-            """
-            function(params) {
-                if (!params.value) return '';
-                return new Date(params.value).toLocaleDateString();
-            }
-            """
-        ),
-    )
 
-    grid_options = gb.build()
+    # --- Format known columns ---
+    if "Email" in display_df.columns:
+        gb.configure_column("Email", header_name="📧 Email", tooltipField="Email")
+    if "Phone" in display_df.columns:
+        gb.configure_column("Phone", header_name="📞 Phone", tooltipField="Phone")
+    if "DOB" in display_df.columns:
+        gb.configure_column(
+            "DOB",
+            header_name="🎂 Date of Birth",
+            type=["dateColumnFilter", "customDateTimeFormat"],
+            valueFormatter=JsCode(
+                """
+                function(params) {
+                    if (!params.value) return '';
+                    return new Date(params.value).toLocaleDateString();
+                }
+                """
+            ),
+        )
+
+    # --- Enable horizontal scroll ---
+    gb.configure_grid_options(domLayout='autoHeight', suppressHorizontalScroll=False)
+    gb.configure_grid_options(ensureDomOrder=True)
+    gb.configure_grid_options(allowHorizontalScroll=True)
+
+    # --- Dynamic key to refresh AgGrid when columns change ---
+    query_columns = "_".join(sorted(display_df.columns))
+    grid_key = f"aggrid_{mode}_{hashlib.md5(query_columns.encode()).hexdigest()}"
 
     grid_response = AgGrid(
         display_df,
-        gridOptions=grid_options,
+        gridOptions=gb.build(),
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         theme="material",
         height=480,
-        fit_columns_on_grid_load=True,
+        fit_columns_on_grid_load=False,  # Disable auto-fit to allow scrolling
         allow_unsafe_jscode=True,
-        key=f"aggrid_{mode}",
+        key=grid_key,
     )
 
+    # --- Handle selection ---
     selected_rows = grid_response.get("selected_rows")
     if selected_rows is None:
         selected_rows = []
     elif isinstance(selected_rows, pd.DataFrame):
         selected_rows = selected_rows.to_dict(orient="records")
 
-    if selected_rows:
+    if selected_rows and "Customer ID" in selected_rows[0]:
         st.session_state["selected_customer"] = selected_rows[0]
         st.success(
-            f"✅ Selected: {selected_rows[0].get('Name')} (ID: {selected_rows[0].get('Customer ID')})"
+            f"✅ Selected: {selected_rows[0].get('Name', 'Unknown')} (ID: {selected_rows[0].get('Customer ID', 'N/A')})"
         )
     else:
         st.session_state["selected_customer"] = None
-        
-        
+        if len(display_df) > 0:
+            st.info("ℹ️ Please select a customer from the table above to proceed.")
+
+
+
+
+
+# def display_search_results(mode="manual"):
+#     if mode == "manual":
+#         customers = st.session_state.get("manual_search_results", [])
+#     else:
+#         customers = st.session_state.get("nlp_search_results", [])
+
+#     if not customers:
+#         st.info("No results to display yet. Please perform a search.")
+#         return
+
+#     df = pd.DataFrame(customers)
+#     # Define Customer ID col fallback
+#     if "customer_id" in df.columns:
+#         customer_id_col = "customer_id"
+#     elif "member_id" in df.columns:
+#         customer_id_col = "member_id"
+#     else:
+#         customer_id_col = df.columns[0]
+
+#     # Define Name col fallback
+#     if "first_name" in df.columns and "last_name" in df.columns:
+#         df["Name"] = df["first_name"] + " " + df["last_name"]
+#         name_col = "Name"
+#     elif "Name" in df.columns:
+#         name_col = "Name"
+#     else:
+#         name_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+
+#     display_cols = [
+#         customer_id_col,
+#         name_col,
+#         "email" if "email" in df.columns else None,
+#         "phone" if "phone" in df.columns else None,
+#         "date_of_birth" if "date_of_birth" in df.columns else None,
+#     ]
+#     display_cols = [col for col in display_cols if col is not None]
+
+#     display_df = df[display_cols].rename(
+#         columns={
+#             customer_id_col: "Customer ID",
+#             name_col: "Name",
+#             "email": "Email",
+#             "phone": "Phone",
+#             "date_of_birth": "DOB",
+#         }
+#     )
+
+#     gb = GridOptionsBuilder.from_dataframe(display_df)
+#     gb.configure_selection(
+#         selection_mode="single",
+#         use_checkbox=True,
+#         suppressRowClickSelection=True,
+#     )
+#     gb.configure_pagination(paginationAutoPageSize=True)
+#     gb.configure_default_column(
+#         editable=False,
+#         filter=True,
+#         sortable=True,
+#         resizable=True,
+#         cellStyle=JsCode(
+#             """
+#             function(params) {
+#                 if (params.node.isSelected()) {
+#                     return {'backgroundColor': '#b9d6f2'};
+#                 } else if (params.rowIndex % 2 === 0) {
+#                     return {'backgroundColor': '#f9f9f9'};
+#                 }
+#             }
+#             """
+#         ),
+#     )
+#     gb.configure_column("Email", header_name="📧 Email", tooltipField="Email")
+#     gb.configure_column("Phone", header_name="📞 Phone", tooltipField="Phone")
+#     gb.configure_column(
+#         "DOB",
+#         header_name="🎂 Date of Birth",
+#         type=["dateColumnFilter", "customDateTimeFormat"],
+#         valueFormatter=JsCode(
+#             """
+#             function(params) {
+#                 if (!params.value) return '';
+#                 return new Date(params.value).toLocaleDateString();
+#             }
+#             """
+#         ),
+#     )
+
+#     grid_options = gb.build()
+
+#     grid_response = AgGrid(
+#         display_df,
+#         gridOptions=grid_options,
+#         update_mode=GridUpdateMode.SELECTION_CHANGED,
+#         theme="material",
+#         height=480,
+#         fit_columns_on_grid_load=True,
+#         allow_unsafe_jscode=True,
+#         key=f"aggrid_{mode}",
+#     )
+
+#     selected_rows = grid_response.get("selected_rows")
+#     if selected_rows is None:
+#         selected_rows = []
+#     elif isinstance(selected_rows, pd.DataFrame):
+#         selected_rows = selected_rows.to_dict(orient="records")
+
+#     if selected_rows:
+#         st.session_state["selected_customer"] = selected_rows[0]
+#         st.success(
+#             f"✅ Selected: {selected_rows[0].get('Name')} (ID: {selected_rows[0].get('Customer ID')})"
+#         )
+#     else:
+#         st.session_state["selected_customer"] = None
+#         # Show info message only if results exist but no selection
+#         st.info("ℹ️ Please select a customer from the table above to proceed.")
 
 # --- Customer Details Tab ---
 def customer_details_tab():
@@ -900,14 +1059,14 @@ def customer_details_tab():
 
 
 # --- Product Search Tab (Placeholder) ---
-def product_search_tab():
-    st.title("🔍 Search Products")
-    st.info("Product search coming soon! Please check back later.")
+#def product_search_tab():
+#    st.title("🔍 Search Products")
+#    st.info("Product search coming soon! Please check back later.")
 
 
 # --- Main Customer Search Tab with toggle ---
 def customer_search_tab():
-    st.title("🔎 Search Customers")
+    st.title("👥 Search Customers")
 
     prev_method = st.session_state.get("search_method_prev", "Manual")
     search_method = st.radio(
@@ -958,121 +1117,7 @@ def customer_search_tab():
        #     st.info("ℹ️ Please select a customer from the table above to proceed.")
 
 
-def display_search_results(mode="manual"):
-    if mode == "manual":
-        customers = st.session_state.get("manual_search_results", [])
-    else:
-        customers = st.session_state.get("nlp_search_results", [])
 
-    if not customers:
-        st.info("No results to display yet. Please perform a search.")
-        return
-
-    df = pd.DataFrame(customers)
-    # Define Customer ID col fallback
-    if "customer_id" in df.columns:
-        customer_id_col = "customer_id"
-    elif "member_id" in df.columns:
-        customer_id_col = "member_id"
-    else:
-        customer_id_col = df.columns[0]
-
-    # Define Name col fallback
-    if "first_name" in df.columns and "last_name" in df.columns:
-        df["Name"] = df["first_name"] + " " + df["last_name"]
-        name_col = "Name"
-    elif "Name" in df.columns:
-        name_col = "Name"
-    else:
-        name_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
-
-    display_cols = [
-        customer_id_col,
-        name_col,
-        "email" if "email" in df.columns else None,
-        "phone" if "phone" in df.columns else None,
-        "date_of_birth" if "date_of_birth" in df.columns else None,
-    ]
-    display_cols = [col for col in display_cols if col is not None]
-
-    display_df = df[display_cols].rename(
-        columns={
-            customer_id_col: "Customer ID",
-            name_col: "Name",
-            "email": "Email",
-            "phone": "Phone",
-            "date_of_birth": "DOB",
-        }
-    )
-
-    gb = GridOptionsBuilder.from_dataframe(display_df)
-    gb.configure_selection(
-        selection_mode="single",
-        use_checkbox=True,
-        suppressRowClickSelection=True,
-    )
-    gb.configure_pagination(paginationAutoPageSize=True)
-    gb.configure_default_column(
-        editable=False,
-        filter=True,
-        sortable=True,
-        resizable=True,
-        cellStyle=JsCode(
-            """
-            function(params) {
-                if (params.node.isSelected()) {
-                    return {'backgroundColor': '#b9d6f2'};
-                } else if (params.rowIndex % 2 === 0) {
-                    return {'backgroundColor': '#f9f9f9'};
-                }
-            }
-            """
-        ),
-    )
-    gb.configure_column("Email", header_name="📧 Email", tooltipField="Email")
-    gb.configure_column("Phone", header_name="📞 Phone", tooltipField="Phone")
-    gb.configure_column(
-        "DOB",
-        header_name="🎂 Date of Birth",
-        type=["dateColumnFilter", "customDateTimeFormat"],
-        valueFormatter=JsCode(
-            """
-            function(params) {
-                if (!params.value) return '';
-                return new Date(params.value).toLocaleDateString();
-            }
-            """
-        ),
-    )
-
-    grid_options = gb.build()
-
-    grid_response = AgGrid(
-        display_df,
-        gridOptions=grid_options,
-        update_mode=GridUpdateMode.SELECTION_CHANGED,
-        theme="material",
-        height=480,
-        fit_columns_on_grid_load=True,
-        allow_unsafe_jscode=True,
-        key=f"aggrid_{mode}",
-    )
-
-    selected_rows = grid_response.get("selected_rows")
-    if selected_rows is None:
-        selected_rows = []
-    elif isinstance(selected_rows, pd.DataFrame):
-        selected_rows = selected_rows.to_dict(orient="records")
-
-    if selected_rows:
-        st.session_state["selected_customer"] = selected_rows[0]
-        st.success(
-            f"✅ Selected: {selected_rows[0].get('Name')} (ID: {selected_rows[0].get('Customer ID')})"
-        )
-    else:
-        st.session_state["selected_customer"] = None
-        # Show info message only if results exist but no selection
-        st.info("ℹ️ Please select a customer from the table above to proceed.")
 
 def display_results_with_chart():
     col1, col2 = st.columns([2, 1])
