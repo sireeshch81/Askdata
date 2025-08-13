@@ -213,22 +213,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['payment_method_key'], ['dim_payment_method.payment_method_key'], ),
     sa.PrimaryKeyConstraint('payment_key')
     )
-    # Add after the existing table creations
-    op.create_table('etl_job_audit_log',
-    sa.Column('audit_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('job_name', sa.String(length=100), nullable=False),
-    sa.Column('source_table', sa.String(length=100), nullable=True),
-    sa.Column('target_table', sa.String(length=100), nullable=True),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('start_time', sa.DateTime(), nullable=False),
-    sa.Column('end_time', sa.DateTime(), nullable=True),
-    sa.Column('records_read', sa.Integer(), nullable=True, default=0),
-    sa.Column('records_written', sa.Integer(), nullable=True, default=0),
-    sa.Column('duration_seconds', sa.Integer(), nullable=True),
-    sa.Column('error_message', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
-    sa.PrimaryKeyConstraint('audit_id')
-    )
     # ### end Alembic commands ###
 
 
@@ -244,5 +228,4 @@ def downgrade() -> None:
     op.drop_table('dim_member')
     op.drop_table('dim_financial_product')
     op.drop_table('dim_date')
-    op.drop_table('etl_job_audit_log')
     # ### end Alembic commands ###
