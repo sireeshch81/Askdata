@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query, status
+# from fastapi.testclient import TestClient
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
@@ -8,6 +9,10 @@ import math
 from datetime import date, datetime
 from mongodb import save_offer, get_recommendations
 from llm_client import generate_recommendation_letter
+# import oltpdb import get_customer_details
+# from dotenv import load_dotenv
+# import os
+# from fastapi.testclient import TestClient
 
 
 from database import get_db, engine
@@ -539,68 +544,52 @@ def get_credit_card_balance(balance_key: int, db: Session = Depends(get_db)):
         )
 
 @app.post("/offer-customer", response_model=schemas.OfferCustomerResponse)
-def offer_customer(request: schemas.OfferCustomerRequest, db: Session = Depends(get_db)):
+def offer_customer(request: schemas.OfferCustomerRequest):
     """
     Create an offer for a customer based on their profile and recommendations
     """
     try:
         customer_id = request.customer_id
-        
-        # Check if customer exists
-        customer = db.query(models.DimMember).filter(
-            models.DimMember.member_id == customer_id
-        ).first()
-        
-        # if not customer:
-        #     raise HTTPException(
-        #         status_code=status.HTTP_404_NOT_FOUND,
-        #         detail=f"Customer with ID {customer_id} not found"
-        #     )
-        
-        # # Get customer's financial health
-        # health = db.query(models.FactFinancialHealth).filter(
-        #     models.FactFinancialHealth.member_key == customer_id
-        # ).order_by(models.FactFinancialHealth.assessment_date_key.desc()).first()
-        
-        # # Get customer's recommendations
-        # recommendations = db.query(models.FactProductRecommendation).filter(
-        #     models.FactProductRecommendation.member_key == customer_id,
-        #     models.FactProductRecommendation.recommendation_status == "pending"
-        # ).all()
-        
         # Generate offer ID (simple implementation)
         import uuid
         offer_id = str(uuid.uuid4())[:8].upper()
-
-        # Save offer to MongoDB
-        # save_offer(offer_id, {
-        #     "customer_id": customer_id,
-        #     "offer_id": offer_id,
-        #     "status": "created",
-        #     "message": f"Offer created successfully for customer {customer.first_name} {customer.last_name}",
-        #     "created_at": datetime.now()
-        # })
+        
+        
+        # Get customer details from OLTP database
+        # try:
+        #     customer_details = oltpdb.get_customer_details(customer_id)
+        #     if not customer_details:
+        #         raise HTTPException(
+        #             status_code=status.HTTP_404_NOT_FOUND,
+        #             detail=f"Customer with ID {customer_id} not found"
+        #         )
+        # except Exception as err:
+        #     logger.error(f"Database error: {err}")
+        #     raise HTTPException(
+        #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        #         detail=f"Database error: {str(err)}"
+        #     )
 
         # Get customer's recommendations and financial health
-        customer_data = get_recommendations(customer_id)
+        customer_profile_recommendations = get_recommendations(customer_id)
+        logger.info(f" Customer data for {customer_id} :--> {customer_profile_recommendations}")
 
-        logger.info(f" Customer data for {customer_id} :--> {customer_data}")
+        # Generate a recommendation letter using customer details and recommendations
+        recommendation_letter = generate_recommendation_letter(
+            recommendations=customer_profile_recommendations,
+            offer_id=offer_id
+        )
+        logger.info(f"Generated recommendation letter for customer {customer_id} with offer ID {offer_id}")
 
-        # Generate recommendation letter
-        recommendation_letter = generate_recommendation_letter(customer_data,offer_id)
-
-        logger.info(f" Recommendation letter for {customer_id} :--> {customer_data}")
-
-        # Save recommendation letter to text file
+        # Save recommendation letter to file
         with open(f"recommendation_letters/{offer_id}.txt", "w") as f:
             f.write(recommendation_letter)
-
         # Save offer to MongoDB
         save_offer(offer_id, {
             "customer_id": customer_id,
             "offer_id": offer_id,
             "status": "created",
-            "message": f"Offer created successfully for customer {customer.first_name} {customer.last_name}",
+            "message": f"Offer created successfully for customer id : {customer_id}",
             "created_at": datetime.now()
         })
         
@@ -609,12 +598,10 @@ def offer_customer(request: schemas.OfferCustomerRequest, db: Session = Depends(
             customer_id=customer_id,
             offer_id=offer_id,
             status="created",
-            message=f"Offer created successfully for customer {customer.first_name} {customer.last_name}",
+            message=f"Offer created successfully for customer id : {customer_id}",
             created_at=datetime.now()
         )
-        
         logger.info(f"Offer created for customer {customer_id} with offer ID {offer_id}")
-        
         return offer_response
         
     except HTTPException:
@@ -627,4 +614,11 @@ def offer_customer(request: schemas.OfferCustomerRequest, db: Session = Depends(
         )
 
 if __name__ == "__main__":
-    print( "Starting Data Warehouse API server..." )
+    print("Starting Data Warehouse API server...")
+    # client = TestClient(app)
+    # # Test offer_customer endpoint
+    # test_request = schemas.OfferCustomerRequest(
+    #     customer_id="1"
+    # )
+    # response = client.post("/offer-customer", json=test_request.dict())
+    # print("Test response:", response.json())

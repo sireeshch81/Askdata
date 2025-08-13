@@ -9,6 +9,7 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 
 # Otherwise, build a Docker-friendly URI from parts
 if not MONGODB_URI:
+    # MONGO_HOST = os.getenv("MONGO_HOST", "localhost")  # service name on docker network
     MONGO_HOST = os.getenv("MONGO_HOST", "mongodb")  # service name on docker network
     MONGO_PORT = os.getenv("MONGO_PORT", "27017")
     MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
@@ -20,6 +21,7 @@ if not MONGODB_URI:
 MONGODB_DB = os.getenv("MONGODB_DB") or os.getenv("MONGO_DATABASE", "askdata")
 RECOMMENDATIONS_COLLECTION = os.getenv("RECOMMENDATIONS_COLLECTION", "recommendations")
 OFFERS_COLLECTION = os.getenv("OFFERS_COLLECTION", "offers")
+CUSTOMER_PROFILES_COLLECTION = os.getenv("CUSTOMER_PROFILES_COLLECTION", "customer_profile")
 
 _client = None
 
@@ -47,10 +49,14 @@ def save_recommendations(customer_id: str, recommendations: list):
 
 def get_recommendations(customer_id: str):
     db = get_mongodb()
-    doc = db[RECOMMENDATIONS_COLLECTION].find_one({"customer_id": customer_id})
-    if doc:
-        return doc.get("recommendations", [])
-    return []
+    recommendations_doc = db[RECOMMENDATIONS_COLLECTION].find_one({"customer_id": customer_id})
+    result = {
+        "customer_id": customer_id,
+        "customer_profile": recommendations_doc.get("customer_profile", []) if recommendations_doc else [],
+        "recommendations": recommendations_doc.get("recommendations", []) if recommendations_doc else []
+    }
+    return result
+
 
 def save_offer(offer_id: str, offer_data: dict):
     db = get_mongodb()
