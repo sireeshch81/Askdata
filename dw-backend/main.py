@@ -575,10 +575,7 @@ def offer_customer(request: schemas.OfferCustomerRequest):
         logger.info(f" Customer data for {customer_id} :--> {customer_profile_recommendations}")
 
         # Generate a recommendation letter using customer details and recommendations
-        recommendation_letter = generate_recommendation_letter(
-            recommendations=customer_profile_recommendations,
-            offer_id=offer_id
-        )
+        recommendation_letter = generate_recommendation_letter(customer_profile_recommendations,offer_id)
         logger.info(f"Generated recommendation letter for customer {customer_id} with offer ID {offer_id}")
 
         # Save recommendation letter to file
