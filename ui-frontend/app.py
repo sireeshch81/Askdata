@@ -1075,11 +1075,10 @@ def display_search_results(mode="manual"):
         st.info("ℹ️ Please select a customer from the table above to proceed.")
 
 def display_results_with_chart():
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([1, 1])
     with col1:
-        st.write("")
-        st.write("")
-
+        st.markdown("<h3 style='text-align: center; font-weight: bold;'>NLP Query Processing Volume Over Time</h3>", unsafe_allow_html=True)
+        show_product_processing_bar_chart()
     with col2:
         show_query_processing_bar_chart()
 
@@ -1116,12 +1115,48 @@ def show_query_processing_bar_chart():
     df['total_queries'].plot(kind='bar', ax=ax, color='skyblue')
     ax.set_xlabel("Date")
     ax.set_ylabel("Number of Queries")
-    ax.set_title("NLP Query Processing Volume Over Time", fontsize=10)
+    ax.set_title("Find Customer", fontsize=10)
     ax.tick_params(axis='x', labelrotation=45, labelsize=8)
     ax.tick_params(axis='y', labelsize=8)
     st.pyplot(fig)
     client.close()
 
+def show_product_processing_bar_chart():
+    client = get_mongo_client()
+    db = client.askdata_mongo
+    collection = db.nlp_queries  # Update NLP queries collection 
+
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$date",
+                "total_queries": {"$sum": "$query_count"}
+            }
+        },
+        {"$sort": {"_id": 1}}
+    ]
+
+    results = list(collection.aggregate(pipeline))
+
+    if not results:
+        st.info("No data available for bar chart.")
+        client.close()
+        return
+
+    df = pd.DataFrame(results)
+    df.rename(columns={"_id": "date"}, inplace=True)
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date', inplace=True)
+
+    fig, ax = plt.subplots(figsize=(3, 2))
+    df['total_queries'].plot(kind='bar', ax=ax, color='skyblue')
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Number of Queries")
+    ax.set_title("Find Product", fontsize=10)
+    ax.tick_params(axis='x', labelrotation=45, labelsize=8)
+    ax.tick_params(axis='y', labelsize=8)
+    st.pyplot(fig)
+    client.close()
 
 def manual_product_search():
     product_name_input = st.session_state.get("product_name_input", "")
