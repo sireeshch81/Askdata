@@ -3,6 +3,7 @@ FROM python:3.13-slim AS builder
 WORKDIR /app
 
 COPY pyproject.toml .
+COPY requirements.txt .
 
 # Copy Zscaler root certificate into the trusted CA store
 COPY zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
@@ -21,7 +22,8 @@ RUN python3 -m venv /app/venv \
     && . /app/venv/bin/activate \
     && /app/venv/bin/pip install --upgrade pip \
     && /app/venv/bin/pip install uv \
-    && /app/venv/bin/uv sync --active
+    && /app/venv/bin/uv sync --active \
+    && /app/venv/bin/pip install -r requirements.txt
 
 
 FROM python:3.13-slim AS runtime
@@ -63,6 +65,7 @@ RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt && update-ca-cer
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV PYTHONUNBUFFERED=1
+ENV OPENAI_API_KEY="123456798"
 
 COPY server_startup.sh .
 COPY .env .
