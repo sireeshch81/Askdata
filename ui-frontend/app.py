@@ -1,8 +1,11 @@
 import streamlit as st
 import requests
 import jwt
+import matplotlib.pyplot as plt
+import pandas as pd
 from keycloak import KeycloakOpenID
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
+from datetime import datetime
 import pandas as pd
 from pymongo import MongoClient
 
@@ -1070,6 +1073,14 @@ def display_search_results(mode="manual"):
         st.session_state["selected_customer"] = None
         # Show info message only if results exist but no selection
         st.info("ℹ️ Please select a customer from the table above to proceed.")
+def display_results_with_chart():
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.write("")
+        st.write("")
+
+    with col2:
+        show_query_processing_bar_chart()
 
 def manual_product_search():
     product_name_input = st.session_state.get("product_name_input", "")
@@ -1461,7 +1472,7 @@ def product_details_tab():
             </div>
             """,
             unsafe_allow_html=True,
-        )  
+        )
     st.markdown(f"## 🏦 Product Details: {selected_product.get('Product Name', 'N/A')} (ID: {product_id})")
     # Optionally, display all product info as a dict for debugging
     # st.write(selected_product)
