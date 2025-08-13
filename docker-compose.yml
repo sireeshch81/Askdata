@@ -184,7 +184,7 @@ services:
     networks:
       - app-network
 
-  app:
+  ui-frontend:
     build:
       context: ./ui-frontend
       dockerfile: Dockerfile
@@ -195,14 +195,8 @@ services:
      # - ./.env:/app/.env
     environment:
       - PYTHONPATH=/app
-      - MYSQL_UI_USER=${MYSQL_UI_USER}
-      - MYSQL_UI_PASSWORD=${MYSQL_UI_PASSWORD}
-      - MYSQL_UI_HOST=ui-frontend-db
-      - MYSQL_UI_PORT=3306
-      - MYSQL_UI_DATABASE=${MYSQL_UI_DATABASE}
       - KEYCLOAK_URL=http://keycloak:8080
     depends_on:
-      - db
       - keycloak
       - dw-backend
     networks:
@@ -222,6 +216,7 @@ services:
       - db_data:/var/lib/mysql
       - ./ui-frontend-db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
       #- ./.env:/app/.env
+      - api-backend
     networks:
       - app-network
 
