@@ -600,6 +600,7 @@ def nlp_customer_search():
                         response.raise_for_status()
                         results = response.json().get("results", [])
                         if results:
+                            log_query_to_mongo(results)
                             st.session_state["nlp_search_results"] = results
                             st.session_state["selected_customer"] = None
                         else:
@@ -937,7 +938,6 @@ def customer_search_tab():
         nlp_customer_search()
         display_search_results(mode="nlp")
         next_btn_key = "next_button_nlp"
-
     # Next button to go to details page if a customer is selected
     selected_customer = st.session_state.get("selected_customer")
     if selected_customer:
@@ -1082,6 +1082,46 @@ def display_results_with_chart():
 
     with col2:
         show_query_processing_bar_chart()
+
+
+
+def show_query_processing_bar_chart():
+    client = get_mongo_client()
+    db = client.askdata_mongo
+    collection = db.nlp_queries  # Update NLP queries collection 
+
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$date",
+                "total_queries": {"$sum": "$query_count"}
+            }
+        },
+        {"$sort": {"_id": 1}}
+    ]
+
+    results = list(collection.aggregate(pipeline))
+
+    if not results:
+        st.info("No data available for bar chart.")
+        client.close()
+        return
+
+    df = pd.DataFrame(results)
+    df.rename(columns={"_id": "date"}, inplace=True)
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date', inplace=True)
+
+    fig, ax = plt.subplots(figsize=(3, 2))
+    df['total_queries'].plot(kind='bar', ax=ax, color='skyblue')
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Number of Queries")
+    ax.set_title("NLP Query Processing Volume Over Time", fontsize=10)
+    ax.tick_params(axis='x', labelrotation=45, labelsize=8)
+    ax.tick_params(axis='y', labelsize=8)
+    st.pyplot(fig)
+    client.close()
+
 
 def manual_product_search():
     product_name_input = st.session_state.get("product_name_input", "")
@@ -1856,6 +1896,25 @@ def product_search_tab():
         # if search_results:
         #     st.info("ℹ️ Please select a product from the table above
 
+def log_query_to_mongo(query_text: str):
+    """
+    Log a user query to MongoDB by incrementing the query_count for the current date.
+    """
+    client = get_mongo_client()
+    db = client.askdata_mongo
+    collection = db.nlp_queries
+
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    collection.update_one(
+        {"date": today_str},
+        {
+            "$inc": {"query_count": 1},
+            "$setOnInsert": {"date": today_str}
+        },
+        upsert=True
+    )
+
+    client.close()
 # --- Main app ---
 def main():
     token = authenticate_user()
@@ -1889,6 +1948,7 @@ def main():
         elif page == "customer_details":
             with tabs[0]:
                 customer_details_tab()
+                display_results_with_chart()
             with tabs[1]:
                 product_search_tab()
         elif page == "product_details":
