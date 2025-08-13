@@ -172,6 +172,61 @@ def get_recommendations(
         updated_at=collection["updated_at"]
     )
 
+# Find all the products
+@app.get("/products", response_model=List[schemas.ProductsResponse])
+def getProductsByProductName(
+    product_name: str = Query(..., description="Product name to search for"),
+    db: Session = Depends(get_db),
+):
+    """
+    Return stubbed products based on product name.
+    """
+
+    print(product_name)
+
+
+    query = db.query(models.FinancialProduct)
+
+    filters = []
+
+    pattern = f"%{product_name}%"
+    filters.append(
+        or_(
+            models.FinancialProduct.product_name.ilike(pattern),
+            
+        )
+    )
+    query  = query.filter(or_(*filters))
+
+    financialProducts = query.limit(100).all()  # limit to 100 results
+
+    if not financialProducts:
+        raise HTTPException(status_code=404, detail="Products not found")
+
+    return [
+            schemas.ProductsResponse(
+                product_id=financialProduct.product_id,
+                product_name=financialProduct.product_name,
+                product_type=financialProduct.product_type,
+                product_category=financialProduct.product_category,
+                interest_rate=financialProduct.interest_rate,
+                credit_limit_min=financialProduct.credit_limit_min,
+                credit_limit_max=financialProduct.credit_limit_max,
+                minimum_income_required=financialProduct.minimum_income_required,
+                minimum_credit_score=financialProduct.minimum_credit_score,
+                maximum_debt_to_income=financialProduct.maximum_debt_to_income,
+                annual_fee=financialProduct.annual_fee,
+                rewards_program=financialProduct.rewards_program,
+                benefits=financialProduct.benefits,
+                eligibility_criteria=financialProduct.eligibility_criteria,
+                is_active=financialProduct.is_active,
+                created_at=financialProduct.created_at,
+                updated_at=financialProduct.updated_at,
+            )
+            for financialProduct in financialProducts
+    ]
+
+
 # Recommendation Letter Endpoint
 @app.get("/recommendation_letter", response_model=str)
 def get_recommendation_letter(

@@ -182,3 +182,23 @@ class RecommendationComparison(BaseModel):
     ml_based_recommendations: List[MLRecommendation]
     comparison_metrics: Dict[str, Any]
     created_at: datetime
+
+class ProductsResponse(BaseModel):
+    """Response schema for financial products"""
+    product_id: int
+    product_name: str
+    product_type: Optional[str] = None
+    product_category: Optional[str] = None
+    interest_rate: Optional[float] = None
+    credit_limit_min: Optional[float] = None
+    credit_limit_max: Optional[float] = None
+    minimum_income_required: Optional[float] = None
+    minimum_credit_score: Optional[int] = None
+    maximum_debt_to_income: Optional[float] = None
+    annual_fee: Optional[float] = None
+    rewards_program: Optional[str] = None
+    benefits: Optional[str] = None
+    eligibility_criteria: Optional[str] = None
+    is_active: Optional[bool] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
