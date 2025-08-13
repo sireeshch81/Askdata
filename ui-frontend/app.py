@@ -1073,6 +1073,7 @@ def display_search_results(mode="manual"):
         st.session_state["selected_customer"] = None
         # Show info message only if results exist but no selection
         st.info("ℹ️ Please select a customer from the table above to proceed.")
+
 def display_results_with_chart():
     col1, col2 = st.columns([2, 1])
     with col1:
@@ -1403,7 +1404,7 @@ def product_details_tab():
         return
 
 
- def manual_product_search():
+def manual_product_search():
     product_name_input = st.session_state.get("product_name_input", "")
     product_type_input = st.session_state.get("product_type_input", "")
     product_category_input = st.session_state.get("product_category_input", "")
