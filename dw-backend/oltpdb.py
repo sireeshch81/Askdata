@@ -13,8 +13,7 @@ load_dotenv()
 # Database connection settings
 MYSQL_OLTP_USER = os.getenv("MYSQL_OLTP_USER", "root")
 MYSQL_OLTP_PASSWORD = os.getenv("MYSQL_OLTP_PASSWORD", "password")
-# MYSQL_OLTP_HOST = os.getenv("MYSQL_OLTP_HOST", "oltp-db")
-MYSQL_OLTP_HOST = os.getenv("MYSQL_OLTP_HOST", "localhost")
+MYSQL_OLTP_HOST = os.getenv("MYSQL_OLTP_HOST", "oltp-db")
 MYSQL_OLTP_PORT = os.getenv("MYSQL_OLTP_PORT", "3306")
 MYSQL_OLTP_DATABASE = os.getenv("MYSQL_OLTP_DATABASE", "askdata_oltp")
 

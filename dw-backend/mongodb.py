@@ -9,7 +9,6 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 
 # Otherwise, build a Docker-friendly URI from parts
 if not MONGODB_URI:
-    # MONGO_HOST = os.getenv("MONGO_HOST", "localhost")  # service name on docker network
     MONGO_HOST = os.getenv("MONGO_HOST", "mongodb")  # service name on docker network
     MONGO_PORT = os.getenv("MONGO_PORT", "27017")
     MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
