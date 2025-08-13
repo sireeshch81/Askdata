@@ -39,7 +39,7 @@ class BatchProcessor:
         try:
             # Connect to MongoDB using team's exact configuration
             mongodb_connected = self.db.connect_mongodb(
-                host="localhost",        # From your docker-compose
+                host="mongodb",        # From your docker-compose
                 port=27017,
                 database="askdata_mongo", # From your .env
                 username="mongo_root",    # From your .env
