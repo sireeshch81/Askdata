@@ -1,8 +1,11 @@
 import streamlit as st
 import requests
 import jwt
+import matplotlib.pyplot as plt
+import pandas as pd
 from keycloak import KeycloakOpenID
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
+from datetime import datetime
 import pandas as pd
 from pymongo import MongoClient
 
@@ -363,27 +366,50 @@ def offer_customer(customer_id: int):
     """
     Call the dw-backend API to offer customer products
     """
-    try:
-        response = requests.post(
-            f"http://dw-backend:5002/offer-customer",
-            json={"customer_id": customer_id},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            st.success(f"✅ Offer successfully created for customer {customer_id}")
-            return result
-        else:
-            st.error(f"❌ Failed to create offer for customer {customer_id}. Status: {response.status_code}")
-            return None
+    import time
+    
+    # Retry configuration
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                f"http://dw-backend:5001/offer-customer",
+                json={"customer_id": customer_id},
+                timeout=30
+            )
             
-    except requests.exceptions.RequestException as e:
-        st.error(f"❌ Error connecting to dw-backend API: {str(e)}")
-        return None
-    except Exception as e:
-        st.error(f"❌ Unexpected error: {str(e)}")
-        return None
+            if response.status_code == 200:
+                result = response.json()
+                st.success(f"✅ Offer successfully created for customer {customer_id}")
+                return result
+            else:
+                st.error(f"❌ Failed to create offer for customer {customer_id}. Status: {response.status_code}")
+                return None
+                
+        except requests.exceptions.ConnectionError as e:
+            if "Failed to resolve 'dw-backend'" in str(e):
+                if attempt < max_retries - 1:
+                    st.warning(f"⚠️ dw-backend service not available (attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    st.error(f"❌ dw-backend service is not running or not accessible. Please ensure the service is started.")
+                    st.info("💡 Try running: docker-compose up dw-backend -d")
+                    return None
+            else:
+                st.error(f"❌ Connection error: {str(e)}")
+                return None
+        except requests.exceptions.RequestException as e:
+            st.error(f"❌ Error connecting to dw-backend API: {str(e)}")
+            return None
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}")
+            return None
+    
+    return None
 
 
 # --- MongoDB Connection ---
@@ -1047,8 +1073,337 @@ def display_search_results(mode="manual"):
         st.session_state["selected_customer"] = None
         # Show info message only if results exist but no selection
         st.info("ℹ️ Please select a customer from the table above to proceed.")
+def display_results_with_chart():
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.write("")
+        st.write("")
+
+    with col2:
+        show_query_processing_bar_chart()
 
 def manual_product_search():
+    product_name_input = st.session_state.get("product_name_input", "")
+    product_type_input = st.session_state.get("product_type_input", "")
+    product_category_input = st.session_state.get("product_category_input", "")
+
+    with st.form("manual_product_search_form"):
+        cols = st.columns(3)
+        with cols[0]:
+            product_name_input = st.text_input(
+                "Product Name",
+                key="product_name_input",
+                placeholder="e.g. Platinum Credit Card",
+                value=product_name_input,
+            )
+        with cols[1]:
+            product_type_input = st.text_input(
+                "Product Type",
+                key="product_type_input",
+                placeholder="e.g. credit_card, personal_loan",
+                value=product_type_input,
+            )
+        with cols[2]:
+            product_category_input = st.text_input(
+                "Product Category",
+                key="product_category_input",
+                placeholder="e.g. premium, standard",
+                value=product_category_input,
+            )
+        submitted = st.form_submit_button("Search")
+
+    if submitted:
+        st.session_state["last_product_name"] = product_name_input.strip()
+        st.session_state["last_product_type"] = product_type_input.strip()
+        st.session_state["last_product_category"] = product_category_input.strip()
+
+        if not (
+            st.session_state["last_product_name"]
+            or st.session_state["last_product_type"]
+            or st.session_state["last_product_category"]
+        ):
+            st.error("Please enter at least one search criteria.")
+            st.session_state["manual_product_search_results"] = []
+            st.session_state["selected_product"] = None
+        else:
+            try:
+                params = {}
+                if st.session_state["last_product_name"]:
+                    params["product_name"] = st.session_state["last_product_name"]
+                if st.session_state["last_product_type"]:
+                    params["product_type"] = st.session_state["last_product_type"]
+                if st.session_state["last_product_category"]:
+                    params["product_category"] = st.session_state["last_product_category"]
+
+                response = requests.get(
+                    "http://askdata-api-backend:5004/products",
+                    params=params,
+                )
+                if response.status_code == 200:
+                    products = response.json()
+                    if products:
+                        st.session_state["manual_product_search_results"] = products
+                        st.session_state["selected_product"] = None
+                    else:
+                        st.info(
+                            "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+                        )
+                        st.session_state["manual_product_search_results"] = []
+                        st.session_state["selected_product"] = None
+                else:
+                    detail = response.json().get("detail", "")
+                    if detail.lower() == "products not found":
+                        st.warning(
+                            "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+                        )
+                        st.session_state["manual_product_search_results"] = []
+                        st.session_state["selected_product"] = None
+                    else:
+                        st.error(f"Error: {detail or 'Unknown error'}")
+            except Exception as e:
+                st.error(f"Failed to fetch data: {e}")
+
+def nlp_product_search():
+    nl_query = st.text_area(
+        "Enter your query in natural language",
+        height=100,
+        placeholder="e.g. Show me premium credit cards with cashback",
+        key="nl_product_query_input",
+    )
+
+    generate_clicked = st.button("Generate SQL", key="generate_product_sql_button")
+
+    if generate_clicked:
+        if not nl_query.strip():
+            st.error("Please enter a natural language query.")
+            st.session_state.pop("generated_product_sql", None)
+            st.session_state.pop("nlp_product_search_results", None)
+            st.session_state["selected_product"] = None
+        else:
+            with st.spinner("Generating SQL..."):
+                try:
+                    response = requests.post(
+                        "http://askdata-api-backend:5004/generate_product_sql",
+                        json={"nl_query": nl_query},
+                    )
+                    response.raise_for_status()
+                    sql_query = response.json().get("sql", "")
+                    if sql_query:
+                        st.session_state["generated_product_sql"] = sql_query
+                        st.success("✅ SQL query generated successfully!")
+                        st.session_state.pop("nlp_product_search_results", None)
+                        st.session_state["selected_product"] = None
+                    else:
+                        st.info("⚠️ No SQL query returned from backend.")
+                        st.session_state.pop("generated_product_sql", None)
+                        st.session_state.pop("nlp_product_search_results", None)
+                        st.session_state["selected_product"] = None
+                except Exception as e:
+                    st.error(f"Error generating SQL: {e}")
+                    st.session_state.pop("generated_product_sql", None)
+                    st.session_state.pop("nlp_product_search_results", None)
+                    st.session_state["selected_product"] = None
+
+    sql_query = st.session_state.get("generated_product_sql", "")
+
+    if sql_query:
+        edited_sql = st.text_area(
+            "Edit SQL if needed",
+            value=sql_query,
+            height=150,
+            key="edited_product_sql_input",
+        )
+
+        run_clicked = st.button("Run SQL", key="run_product_sql_button")
+
+        if run_clicked:
+            if not edited_sql.strip():
+                st.error("SQL query cannot be empty.")
+                st.session_state.pop("nlp_product_search_results", None)
+                st.session_state["selected_product"] = None
+            else:
+                with st.spinner("Running SQL query..."):
+                    try:
+                        response = requests.post(
+                            "http://askdata-api-backend:5004/run_custom_product_query",
+                            json={"sql_query": edited_sql},
+                        )
+                        response.raise_for_status()
+                        results = response.json().get("results", [])
+                        if results:
+                            st.session_state["nlp_product_search_results"] = results
+                            st.session_state["selected_product"] = None
+                        else:
+                            st.warning(
+                                "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+                            )
+                            st.session_state["nlp_product_search_results"] = []
+                            st.session_state["selected_product"] = None
+                    except Exception as e:
+                        st.error(f"Error running SQL query: {e}")
+                        st.session_state.pop("nlp_product_search_results", None)
+                        st.session_state["selected_product"] = None
+
+def display_product_search_results(mode="manual"):
+    if mode == "manual":
+        products = st.session_state.get("manual_product_search_results", [])
+    else:
+        products = st.session_state.get("nlp_product_search_results", [])
+
+    if not products:
+        st.info("No results to display yet. Please perform a search.")
+        return
+
+    df = pd.DataFrame(products)
+    # Define Product ID col fallback
+    product_id_col = "product_id" if "product_id" in df.columns else df.columns[0]
+    product_name_col = "product_name" if "product_name" in df.columns else df.columns[1] if len(df.columns) > 1 else df.columns[0]
+
+    display_cols = [
+        product_id_col,
+        product_name_col,
+        "product_type" if "product_type" in df.columns else None,
+        "product_category" if "product_category" in df.columns else None,
+        "interest_rate" if "interest_rate" in df.columns else None,
+        "credit_limit_min" if "credit_limit_min" in df.columns else None,
+        "credit_limit_max" if "credit_limit_max" in df.columns else None,
+        "minimum_income_required" if "minimum_income_required" in df.columns else None,
+        "minimum_credit_score" if "minimum_credit_score" in df.columns else None,
+        "maximum_debt_to_income" if "maximum_debt_to_income" in df.columns else None,
+        "annual_fee" if "annual_fee" in df.columns else None,
+        "rewards_program" if "rewards_program" in df.columns else None,
+        "benefits" if "benefits" in df.columns else None,
+        "eligibility_criteria" if "eligibility_criteria" in df.columns else None,
+        "is_active" if "is_active" in df.columns else None,
+        "created_at" if "created_at" in df.columns else None,
+        "updated_at" if "updated_at" in df.columns else None,
+    ]
+    display_cols = [col for col in display_cols if col is not None]
+
+    display_df = df[display_cols].rename(
+        columns={
+            product_id_col: "Product ID",
+            product_name_col: "Product Name",
+            "product_type": "Type",
+            "product_category": "Category",
+            "interest_rate": "Interest Rate",
+            "credit_limit_min": "Credit Limit Min",
+            "credit_limit_max": "Credit Limit Max",
+            "minimum_income_required": "Minimum Income Required",
+            "minimum_credit_score": "Minimum Credit Score",
+            "maximum_debt_to_income": "Maximum Debt to Income",
+            "annual_fee": "Annual Fee",
+            "rewards_program": "Rewards Program",
+            "benefits": "Benefits",
+            "eligibility_criteria": "Eligibility Criteria",
+            "is_active": "Active",
+            "created_at": "Created At",
+            "updated_at": "Updated At",
+        }
+    )
+
+    gb = GridOptionsBuilder.from_dataframe(display_df)
+    gb.configure_selection(
+        selection_mode="single",
+        use_checkbox=True,
+        suppressRowClickSelection=True,
+    )
+    gb.configure_pagination(paginationAutoPageSize=True)
+    gb.configure_default_column(
+        editable=False,
+        filter=True,
+        sortable=True,
+        resizable=True,
+        cellStyle=JsCode(
+            """
+            function(params) {
+                if (params.node.isSelected()) {
+                    return {'backgroundColor': '#f7e6ff'};
+                } else if (params.rowIndex % 2 === 0) {
+                    return {'backgroundColor': '#f9f9f9'};
+                }
+            }
+            """
+        ),
+    )
+    gb.configure_column("Product Name", header_name="🏦 Product Name", tooltipField="Product Name")
+    gb.configure_column("Type", header_name="🗂 Type", tooltipField="Type")
+    gb.configure_column("Category", header_name="📦 Category", tooltipField="Category")
+    gb.configure_column("Interest Rate", header_name="💲 Interest Rate", tooltipField="Interest Rate")
+    gb.configure_column("Annual Fee", header_name="💸 Annual Fee", tooltipField="Annual Fee")
+    gb.configure_column("Active", header_name="✅ Active", tooltipField="Active")
+    gb.configure_column("Credit Limit Min", header_name="🔢 Credit Limit Min", tooltipField="Credit Limit Min")
+    gb.configure_column("Credit Limit Max", header_name="🔢 Credit Limit Max", tooltipField="Credit Limit Max")
+    gb.configure_column("Minimum Income Required", header_name="💼 Minimum Income Required", tooltipField="Minimum Income Required")
+    gb.configure_column("Minimum Credit Score", header_name="📊 Minimum Credit Score", tooltipField="Minimum Credit Score")
+    gb.configure_column("Maximum Debt to Income", header_name="📉 Max Debt/Income", tooltipField="Maximum Debt to Income")
+    gb.configure_column("Rewards Program", header_name="🎁 Rewards Program", tooltipField="Rewards Program")
+    gb.configure_column("Benefits", header_name="⭐ Benefits", tooltipField="Benefits")
+    gb.configure_column("Eligibility Criteria", header_name="📝 Eligibility Criteria", tooltipField="Eligibility Criteria")
+    gb.configure_column("Created At", header_name="🕒 Created At", tooltipField="Created At")
+    gb.configure_column("Updated At", header_name="🕒 Updated At", tooltipField="Updated At")
+
+    grid_options = gb.build()
+
+    grid_response = AgGrid(
+        display_df,
+        gridOptions=grid_options,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        theme="material",
+        height=480,
+        fit_columns_on_grid_load=True,
+        allow_unsafe_jscode=True,
+        key=f"aggrid_product_{mode}",
+    )
+
+    selected_rows = grid_response.get("selected_rows")
+    if selected_rows is None:
+        selected_rows = []
+    elif isinstance(selected_rows, pd.DataFrame):
+        selected_rows = selected_rows.to_dict(orient="records")
+
+    if selected_rows:
+        st.session_state["selected_product"] = selected_rows[0]
+        st.success(
+            f"✅ Selected: {selected_rows[0].get('Product Name')} (ID: {selected_rows[0].get('Product ID')})"
+        )
+    else:
+        st.session_state["selected_product"] = None
+        st.info("ℹ️ Please select a product from the table above to proceed.")
+
+
+def product_details_tab():
+    selected_product = st.session_state.get("selected_product")
+    if not selected_product:
+        st.warning("No product selected. Please go back and select a product.")
+        if st.button("Back to Product Search", key="back_to_product_search_from_details"):
+            st.session_state["page"] = "search_product"
+            for key in [
+                "manual_product_search_results",
+                "nlp_product_search_results",
+                "selected_product",
+                "last_product_name",
+                "last_product_type",
+                "last_product_category",
+                "product_name_input",
+                "product_type_input",
+                "product_category_input",
+                "generated_product_sql",
+                "edited_product_sql_input",
+            ]:
+                st.session_state.pop(key, None)
+            st.rerun()
+        return
+
+    product_id = selected_product.get("Product ID") or selected_product.get("product_id")
+
+
+    if product_id is None:
+        st.error("Selected product missing Product ID. Please select again.")
+        return
+
+
+ def manual_product_search():
     product_name_input = st.session_state.get("product_name_input", "")
     product_type_input = st.session_state.get("product_type_input", "")
     product_category_input = st.session_state.get("product_category_input", "")
@@ -1438,7 +1793,8 @@ def product_details_tab():
             </div>
             """,
             unsafe_allow_html=True,
-        )  
+        )
+
     st.markdown(f"## 🏦 Product Details: {selected_product.get('Product Name', 'N/A')} (ID: {product_id})")
     # Optionally, display all product info as a dict for debugging
     # st.write(selected_product)

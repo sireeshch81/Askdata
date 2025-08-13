@@ -228,3 +228,22 @@ class FactCreditCardBalance(Base):
     is_maxed_out = Column(Boolean)  # > 95%
     
     created_datetime = Column(TIMESTAMP, server_default=func.current_timestamp())
+
+class Member(Base):
+    __tablename__ = "members"
+
+    member_id = Column(Integer, primary_key=True, index=True)
+    first_name = Column(String(50), nullable=False)
+    last_name = Column(String(50), nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    phone = Column(String(20), nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    address = Column(String(255), nullable=False)
+    city = Column(String(50), nullable=False)
+    state = Column(String(50), nullable=False)
+    zip_code = Column(String(10), nullable=False)
+
+    # credit_cards = relationship("CreditCard", back_populates="member")
+    # payments = relationship("PaymentHistory", back_populates="member")
+    # financial_metrics = relationship("FinancialHealthMetric", back_populates="member")
+    #financial_products = relationship("FinancialProduct", back_populates="member")

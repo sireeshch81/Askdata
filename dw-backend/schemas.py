@@ -431,17 +431,30 @@ class MemberHealthTrend(BaseModel):
         from_attributes = True
 
 class OfferCustomerRequest(BaseModel):
-    customer_id: int
+    customer_id: str
     
     class Config:
         from_attributes = True
 
 class OfferCustomerResponse(BaseModel):
-    customer_id: int
+    customer_id: str
     offer_id: str
     status: str
     message: str
     created_at: datetime
     
+    class Config:
+        from_attributes = True
+
+class Customer(BaseModel):
+    customer_id: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    credit_score: Optional[int] = None
+    income: Optional[Decimal] = None
+
     class Config:
         from_attributes = True

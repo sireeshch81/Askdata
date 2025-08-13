@@ -15,8 +15,7 @@ dependencies = [
     "uv",
     "cryptography",
     "python-dotenv",
-    "langchain-openai",  # This is what llm_client.py actually imports
+    "langchain",
+    "langchain_openai",
+    "dotenv",
 ]
-
-
-

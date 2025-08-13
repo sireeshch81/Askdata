@@ -1,5 +1,7 @@
 import os
 import json
+from datetime import datetime
+
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -22,13 +24,13 @@ llm = ChatOpenAI(
 def load_recommendation_prompt():
     """Load the recommendation letter prompt from file."""
     try:
-        with open("api-backend/prompts/recommendation-letter-prompt.txt", "r") as f:
+        with open("./recommendation-letter-prompt.txt", "r") as f:
             return f.read().strip()
     except FileNotFoundError:
         print("❌ Error: recommendation-letter-prompt.txt not found!")
         return None
 
-def generate_recommendation_letter(customer_data,offer_id):
+def generate_recommendation_letter(customer_details, customer_data, offer_id):
     """
     Generate a recommendation letter using the prompt and customer data.
     
@@ -44,17 +46,22 @@ def generate_recommendation_letter(customer_data,offer_id):
         return "Error: Could not load prompt template"
     
     # Convert customer data to JSON string for the prompt
-    customer_data_json = json.dumps(customer_data, indent=2)
-    
+    customer_details_json = json.dumps(customer_details)
+    customer_data_json = json.dumps(customer_data)
+    offer_id_json = json.dumps(offer_id)
+
     # Create the full prompt with customer data
     full_prompt = f"""
 {prompt_template}
 
-Offer ID:
-{offer_id}
+[Date]: {datetime}
+Please add Offer ID in the letter for reference:{offer_id_json}
+Customer Details (JSON):{customer_details_json}
+Add top 2 recommendation in this letter where rank 1 and rank 2 from Customer Data (JSON):{customer_data_json}
 
-Customer Data (JSON):
-{customer_data_json}
+[Your Name] : Digital Customer Support Assistance 
+[Your Bank's Name] : XYZ Bank Inc. 
+[Contact Information] : abc@xyzbank.com, 99900099999
 
 Please generate the recommendation letter based on the above instructions and customer data.
 """
@@ -67,12 +74,12 @@ Please generate the recommendation letter based on the above instructions and cu
         return f"Error generating recommendation letter: {e}"
 
 # def test_recommendation_letter():
-#     """Test the recommendation letter generation with sample data."""
-#     # Sample customer data (you can replace this with real data)
-# # Generate offer ID (simple implementation)
+    """Test the recommendation letter generation with sample data."""
+    # Sample customer data (you can replace this with real data)
+# Generate offer ID (simple implementation)
 #     import uuid
 #     offer_id = str(uuid.uuid4())[:8].upper()
-
+#
 #     sample_customer_data = {
 #         "customer_profile": {
 #             "name": "John Smith",
@@ -96,7 +103,7 @@ Please generate the recommendation letter based on the above instructions and cu
 #             }
 #         ]
 #     }
-    
+#
 #     print("📝 Generating recommendation letter...")
 #     letter = generate_recommendation_letter(sample_customer_data,offer_id)
 #     print("\n" + "="*50)
@@ -112,7 +119,7 @@ Please generate the recommendation letter based on the above instructions and cu
     
     # Test recommendation letter generation
 #     test_recommendation_letter()
-    
+#
 # except Exception as e:
 #     print(f"❌ Error calling OpenAI API: {e}")
 #     print("Please check your API key and internet connection.")
