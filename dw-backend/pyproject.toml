@@ -9,14 +9,14 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "psycopg2-binary",   # PostgreSQL support
-    "pymysql",  # Add this for MySQL support
+    "pymongo",           # MongoDB support
+    "pymysql",           # MySQL support
     "sqlalchemy",
     "uv",
     "cryptography",
     "python-dotenv",
+    "langchain-openai",  # This is what llm_client.py actually imports
 ]
-
-
 
 
 
