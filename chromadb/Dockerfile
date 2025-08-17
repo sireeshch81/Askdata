@@ -1,4 +1,4 @@
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Install system dependencies
 RUN apt-get update \
@@ -21,14 +21,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY pyproject.toml .
+COPY requirements.txt .
 
-RUN python -m venv /app/venv \
+RUN rm -rf /app/venv \
+    && python -m venv /app/venv \
     && . /app/venv/bin/activate \
     && /app/venv/bin/pip install --upgrade pip \
-    && /app/venv/bin/pip install uv \
-    && /app/venv/bin/uv sync --active
+    && /app/venv/bin/pip install -r requirements.txt
+#    && /app/venv/bin/pip install uv \
+#    && /app/venv/bin/uv sync --active
 
-FROM python:3.11-slim as runtime
+FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
@@ -54,11 +57,16 @@ RUN apt-get update && apt-get install -y netcat-openbsd \
 
 RUN mkdir -p /data /cache/sentence-transformers /cache/huggingface \
     && adduser --disabled-password --gecos "" appuser \
-    && chown -R appuser:appuser /app /data /cache
+    && chown -R appuser:appuser /app /data /cache \
+    && echo "alias ll='ls -lahF'" >> /home/appuser/.bashrc \
+    && echo "DW-BACKEND: Running in container" >> /home/appuser/hostinfo.txt
 
 COPY --from=builder /app/venv /app/venv/
 
 RUN chmod +x server_startup.sh \
+    && find /app/venv/bin -type f -executable -exec chmod +x {} \; \
+    && rm -f /app/venv/bin/python* \
+    && ln -s /usr/local/bin/python /app/venv/bin/python \
     && chown -R appuser:appuser /app \
     && chown appuser:appuser server_startup.sh
 
