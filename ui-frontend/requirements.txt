@@ -12,3 +12,4 @@ streamlit-aggrid
 pandas
 pymongo
 matplotlib
+plotly>=5.0.0

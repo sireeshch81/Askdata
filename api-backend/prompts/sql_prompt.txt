@@ -14,6 +14,9 @@ Rules:
 - Always alias aggregate columns explicitly using AS with meaningful names.
 - Avoid SELECT *; always list columns explicitly.
 - Do not include comments, explanations, or extra text; return only the SQL.
+- When generating SQL, always use the correct table and column names exactly as defined above. 
+- Do not invent new columns or tables. 
+- Use joins when appropriate.
 
 Database schema:askdata_oltp
 
