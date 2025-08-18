@@ -6,25 +6,26 @@ import pandas as pd
 from keycloak import KeycloakOpenID
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 from datetime import datetime
-import pandas as pd
 from pymongo import MongoClient
 import hashlib
+import plotly.express as px
+
 
 st.set_page_config(layout="wide")
 
 # --- Branding & Styling ---
 def show_fixed_branding():
-    cols = st.columns([1, 3])  # logo + text
+    cols = st.columns([1.2, 2.2])  # logo + text
     with cols[0]:
         st.image("cgilogo.png", width=120)
     with cols[1]:
         st.markdown(
             """
-            <h1 style="color:#b22222; font-weight: 900; margin-bottom: 0; 
+            <h1 style="color:#b22222; font-weight: 700; margin-bottom: 0; 
                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
                 AskData
             </h1>
-            <p style="font-style: italic; color: #666; font-size: 18px; margin-top: 4px;
+            <p style="font-style: italic; color: #666; font-size: 18px; margin-top: 2px;
                       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
                 Ask Naturally. Understand Instantly.
             </p>
@@ -298,7 +299,7 @@ def authenticate_user():
         ]:
             st.session_state.pop(key, None)
 
-        col1, col2, col3 = st.columns([1, 2, 1])
+        col1, col2, col3 = st.columns([2, 1, 2])
         with col2:
             st.markdown("### Login to CGI AskData")
             with st.form("login_form"):
@@ -376,8 +377,9 @@ def offer_customer(customer_id: int):
     for attempt in range(max_retries):
         try:
             response = requests.post(
-                f"http://dw-backend:5001/offer-customer",
-                json={"customer_id": customer_id},
+                "http://dw-backend:5001/offer-customer",
+                json={"customer_id": str(customer_id)},
+                headers={"Content-Type": "application/json"},
                 timeout=30
             )
             
@@ -682,12 +684,28 @@ def display_search_results(mode="manual"):
         display_df = df.copy()
 
         # Map member_id/customer_id to Customer ID if row-level data
+        if "first_name" in display_df.columns and "last_name" in display_df.columns:
+            display_df["Name"] = display_df["first_name"] + " " + display_df["last_name"]
+            name_col = "Name"
+        elif "Name" in display_df.columns:
+            name_col = "Name"
+        else:
+            name_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+        
         if "member_id" in display_df.columns or "customer_id" in display_df.columns:
             if "Customer ID" not in display_df.columns:
                 if "member_id" in display_df.columns:
                     display_df["Customer ID"] = display_df["member_id"]
                 else:
                     display_df["Customer ID"] = display_df["customer_id"]
+        rename_map = {}
+        if "email" in display_df.columns:
+            rename_map["email"] = "Email"
+        if "phone" in display_df.columns:
+            rename_map["phone"] = "Phone"
+        if "date_of_birth" in display_df.columns:
+            rename_map["date_of_birth"] = "DOB"
+        display_df.rename(columns=rename_map, inplace=True)
 
     # --- AgGrid setup ---
     gb = GridOptionsBuilder.from_dataframe(display_df)
@@ -717,6 +735,8 @@ def display_search_results(mode="manual"):
     )
 
     # --- Format known columns ---
+    if "Email" in display_df.columns:
+        gb.configure_column("Name", header_name="Name", tooltipField="Name")
     if "Email" in display_df.columns:
         gb.configure_column("Email", header_name="📧 Email", tooltipField="Email")
     if "Phone" in display_df.columns:
@@ -775,123 +795,6 @@ def display_search_results(mode="manual"):
 
 
 
-
-
-# def display_search_results(mode="manual"):
-#     if mode == "manual":
-#         customers = st.session_state.get("manual_search_results", [])
-#     else:
-#         customers = st.session_state.get("nlp_search_results", [])
-
-#     if not customers:
-#         st.info("No results to display yet. Please perform a search.")
-#         return
-
-#     df = pd.DataFrame(customers)
-#     # Define Customer ID col fallback
-#     if "customer_id" in df.columns:
-#         customer_id_col = "customer_id"
-#     elif "member_id" in df.columns:
-#         customer_id_col = "member_id"
-#     else:
-#         customer_id_col = df.columns[0]
-
-#     # Define Name col fallback
-#     if "first_name" in df.columns and "last_name" in df.columns:
-#         df["Name"] = df["first_name"] + " " + df["last_name"]
-#         name_col = "Name"
-#     elif "Name" in df.columns:
-#         name_col = "Name"
-#     else:
-#         name_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
-
-#     display_cols = [
-#         customer_id_col,
-#         name_col,
-#         "email" if "email" in df.columns else None,
-#         "phone" if "phone" in df.columns else None,
-#         "date_of_birth" if "date_of_birth" in df.columns else None,
-#     ]
-#     display_cols = [col for col in display_cols if col is not None]
-
-#     display_df = df[display_cols].rename(
-#         columns={
-#             customer_id_col: "Customer ID",
-#             name_col: "Name",
-#             "email": "Email",
-#             "phone": "Phone",
-#             "date_of_birth": "DOB",
-#         }
-#     )
-
-#     gb = GridOptionsBuilder.from_dataframe(display_df)
-#     gb.configure_selection(
-#         selection_mode="single",
-#         use_checkbox=True,
-#         suppressRowClickSelection=True,
-#     )
-#     gb.configure_pagination(paginationAutoPageSize=True)
-#     gb.configure_default_column(
-#         editable=False,
-#         filter=True,
-#         sortable=True,
-#         resizable=True,
-#         cellStyle=JsCode(
-#             """
-#             function(params) {
-#                 if (params.node.isSelected()) {
-#                     return {'backgroundColor': '#b9d6f2'};
-#                 } else if (params.rowIndex % 2 === 0) {
-#                     return {'backgroundColor': '#f9f9f9'};
-#                 }
-#             }
-#             """
-#         ),
-#     )
-#     gb.configure_column("Email", header_name="📧 Email", tooltipField="Email")
-#     gb.configure_column("Phone", header_name="📞 Phone", tooltipField="Phone")
-#     gb.configure_column(
-#         "DOB",
-#         header_name="🎂 Date of Birth",
-#         type=["dateColumnFilter", "customDateTimeFormat"],
-#         valueFormatter=JsCode(
-#             """
-#             function(params) {
-#                 if (!params.value) return '';
-#                 return new Date(params.value).toLocaleDateString();
-#             }
-#             """
-#         ),
-#     )
-
-#     grid_options = gb.build()
-
-#     grid_response = AgGrid(
-#         display_df,
-#         gridOptions=grid_options,
-#         update_mode=GridUpdateMode.SELECTION_CHANGED,
-#         theme="material",
-#         height=480,
-#         fit_columns_on_grid_load=True,
-#         allow_unsafe_jscode=True,
-#         key=f"aggrid_{mode}",
-#     )
-
-#     selected_rows = grid_response.get("selected_rows")
-#     if selected_rows is None:
-#         selected_rows = []
-#     elif isinstance(selected_rows, pd.DataFrame):
-#         selected_rows = selected_rows.to_dict(orient="records")
-
-#     if selected_rows:
-#         st.session_state["selected_customer"] = selected_rows[0]
-#         st.success(
-#             f"✅ Selected: {selected_rows[0].get('Name')} (ID: {selected_rows[0].get('Customer ID')})"
-#         )
-#     else:
-#         st.session_state["selected_customer"] = None
-#         # Show info message only if results exist but no selection
-#         st.info("ℹ️ Please select a customer from the table above to proceed.")
 
 # --- Customer Details Tab ---
 def customer_details_tab():
@@ -959,13 +862,14 @@ def customer_details_tab():
         flex-shrink: 0;
     """
 
+    # --- KYC Card ---
     with cols[0]:
         st.markdown(
             f"""
             <div style="{card_style}">
                 <div style="{content_style}">
                     <h3 style="color:#b22222; font-weight: 900; margin-bottom: 0.8rem;">Customer KYC</h3>
-                    <p><strong>Name:</strong> {selected_customer.get("Name", "N/A")} (ID: {customer_id})</p>
+                    <p>👤 <strong>Name:</strong> {selected_customer.get("Name", "N/A")} (ID: {customer_id})</p>
                     <p>✉️ <strong>Email:</strong> {selected_customer.get("Email", "N/A")}</p>
                     <p>📞 <strong>Phone:</strong> {selected_customer.get("Phone", "N/A")}</p>
                     <p>🎂 <strong>Date of Birth:</strong> {selected_customer.get("DOB", "N/A")}</p>
@@ -976,6 +880,7 @@ def customer_details_tab():
             unsafe_allow_html=True,
         )
 
+    # --- Customer Profile Card ---
     with cols[1]:
         profile = rec_doc.get("customer_profile") if rec_doc else None
         if profile:
@@ -983,7 +888,7 @@ def customer_details_tab():
                 f"""
                 <div style="{card_style}">
                     <div style="{content_style}">
-                        <h3 style="color:#b22222; font-weight: 900; margin-bottom: 0.8rem;">Customer Profile</h3>
+                        <h3 style="color:#b22222; font-weight: 900; margin-bottom: 0.5rem;">Customer Profile</h3>
                         <p><strong>Annual Income:</strong> ${profile.get('annual_income', 'N/A'):,}</p>
                         <p><strong>Credit Score:</strong> {profile.get('credit_score', 'N/A')}</p>
                         <p><strong>Health Score:</strong> {profile.get('health_score', 'N/A')}</p>
@@ -998,19 +903,16 @@ def customer_details_tab():
         else:
             st.info("No customer profile data available.")
 
+    # --- Recommendations + Offer Button ---
     with cols[2]:
         st.markdown(
             """
-            <h3 style="color:#b22222; font-weight: 900; margin-bottom: 1rem;">Recommendations</h3>
+            <h3 style="color:#b22222; font-weight: 450900; margin-bottom: 0.5rem;">Recommendations</h3>
             """,
             unsafe_allow_html=True,
         )
 
-        if (
-            rec_doc
-            and "recommendations" in rec_doc
-            and rec_doc["recommendations"]
-        ):
+        if rec_doc and "recommendations" in rec_doc and rec_doc["recommendations"]:
             icon_map = {
                 "credit_card": "💳",
                 "savings_account": "🏦",
@@ -1038,24 +940,26 @@ def customer_details_tab():
         else:
             st.info("No recommendations found for this customer.")
 
-    if st.button("⬅️ Back to Search", key="back_button_from_details"):
-        st.session_state["page"] = "search_customer"
-        st.rerun()
-    
-    # Add Offer Customer button at bottom right using Streamlit columns
-    st.markdown("<br><br><br><br>", unsafe_allow_html=True)  # Add some spacing
-    
-    # Create a container for the bottom right button
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col3:
-        if st.button("🎯 Offer Customer", 
-                    key=f"offer_customer_{customer_id}", 
-                    help="Create offer for this customer",
-                    use_container_width=True):
+        # --- Offer Customer button below recommendations ---
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button(
+            "🎯 Offer Customer",
+            key=f"offer_customer_{customer_id}",
+            help="Create offer for this customer",
+            use_container_width=True
+        ):
             result = offer_customer(customer_id)
             if result:
                 st.success(f"✅ Offer created successfully for customer {customer_id}!")
                 st.info("Check the dw-backend for offer details.")
+
+    # --- Chart or other results ---
+    display_results_with_chart()
+
+    # --- Back button ---
+    if st.button("⬅️ Back to Search", key="back_button_from_details"):
+        st.session_state["page"] = "search_customer"
+        st.rerun()
 
 
 # --- Product Search Tab (Placeholder) ---
@@ -1117,91 +1021,130 @@ def customer_search_tab():
        #     st.info("ℹ️ Please select a customer from the table above to proceed.")
 
 
+# Now you can call it inside display_results_with_chart
+
+# ---------------- show_bar_chart ----------------
+def show_bar_chart(collection_name: str, title: str, key: str, width: int = 320):
+    client = get_mongo_client()
+    db = client.askdata_mongo
+    collection = db[collection_name]
+
+    pipeline = [
+        {"$group": {"_id": "$date", "total_queries": {"$sum": "$query_count"}}},
+        {"$sort": {"_id": 1}}
+    ]
+    results = list(collection.aggregate(pipeline))
+    client.close()
+
+    if not results:
+        st.info(f"📭 No data available for {title}.")
+        return
+
+    df = pd.DataFrame(results)
+    df.rename(columns={"_id": "date"}, inplace=True)
+    df["date"] = pd.to_datetime(df["date"])
+    df.sort_values("date", inplace=True)
+
+    color_map = {
+        "nlp_queries": "#2196F3",      # Customer
+        "product_queries": "#FF9800",  # Product
+    }
+    bar_color = color_map.get(collection_name, "#4CAF50")
+
+    fig = px.bar(
+        df,
+        x="date",
+        y="total_queries",
+        title=title,
+        labels={"total_queries": "Number of Queries", "date": "Date"},
+        text="total_queries",
+    )
+
+    fig.update_traces(
+        textposition="outside",
+        marker_color=bar_color,
+        marker_line_color="rgba(0,0,0,0.5)",
+        marker_line_width=1,
+        opacity=0.9,
+    )
+
+    fig.update_layout(
+        width=width,
+        height=250,
+        bargap=0.25,
+        margin=dict(l=10, r=10, t=30, b=25),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(color="#333", size=11),
+        title=dict(font=dict(size=13, color="#b22222"))
+    )
+
+    st.plotly_chart(fig, use_container_width=False, key=key)
 
 
+# ---------------- display_results_with_chart ----------------
 def display_results_with_chart():
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        st.markdown("<h3 style='text-align: center; font-weight: bold;'>NLP Query Processing Volume Over Time</h3>", unsafe_allow_html=True)
-        show_product_processing_bar_chart()
-    with col2:
-        show_query_processing_bar_chart()
+    st.markdown(
+        "<h3 style='color:#b22222; text-align:left; margin-top:0.1rem;'>📊 KPI: Query Volume</h3>",
+        unsafe_allow_html=True
+    )
+
+    # Spacer-based columns to keep cards side by side
+    customer_col, product_col, spacer_right = st.columns([0.8, 0.8, 1], gap="small")
+
+    card_width = 280
+
+    # ---------------- Customer Queries Card ----------------
+    with customer_col:
+        st.markdown(
+            f"""
+            <div style="
+                background-color: #fff;
+                border-radius: 12px;
+                padding: 0.5rem;
+                width:{card_width}px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                text-align:left;
+                margin-bottom:0.5rem;
+            ">
+                <h4>Customer Queries</h4>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        show_bar_chart(
+            collection_name="nlp_queries",
+            title="Customer Queries",
+            key="chart_customer_queries",
+            width=card_width
+        )
+
+    # ---------------- Product Queries Card ----------------
+    with product_col:
+        st.markdown(
+            f"""
+            <div style="
+                background-color: #fff;
+                border-radius: 12px;
+                padding: 0.5rem;
+                width:{card_width}px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                text-align:left;
+                margin-bottom:0.5rem;
+            ">
+                <h4>Product Queries</h4>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        show_bar_chart(
+            collection_name="product_queries",
+            title="Product Queries",
+            key="chart_product_queries",
+            width=card_width
+        )
 
 
-
-def show_query_processing_bar_chart():
-    client = get_mongo_client()
-    db = client.askdata_mongo
-    collection = db.nlp_queries  # Update NLP queries collection 
-
-    pipeline = [
-        {
-            "$group": {
-                "_id": "$date",
-                "total_queries": {"$sum": "$query_count"}
-            }
-        },
-        {"$sort": {"_id": 1}}
-    ]
-
-    results = list(collection.aggregate(pipeline))
-
-    if not results:
-        st.info("No data available for bar chart.")
-        client.close()
-        return
-
-    df = pd.DataFrame(results)
-    df.rename(columns={"_id": "date"}, inplace=True)
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
-
-    fig, ax = plt.subplots(figsize=(3, 2))
-    df['total_queries'].plot(kind='bar', ax=ax, color='skyblue')
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Number of Queries")
-    ax.set_title("Find Customer", fontsize=10)
-    ax.tick_params(axis='x', labelrotation=45, labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-    st.pyplot(fig)
-    client.close()
-
-def show_product_processing_bar_chart():
-    client = get_mongo_client()
-    db = client.askdata_mongo
-    collection = db.nlp_queries  # Update NLP queries collection 
-
-    pipeline = [
-        {
-            "$group": {
-                "_id": "$date",
-                "total_queries": {"$sum": "$query_count"}
-            }
-        },
-        {"$sort": {"_id": 1}}
-    ]
-
-    results = list(collection.aggregate(pipeline))
-
-    if not results:
-        st.info("No data available for bar chart.")
-        client.close()
-        return
-
-    df = pd.DataFrame(results)
-    df.rename(columns={"_id": "date"}, inplace=True)
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
-
-    fig, ax = plt.subplots(figsize=(3, 2))
-    df['total_queries'].plot(kind='bar', ax=ax, color='skyblue')
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Number of Queries")
-    ax.set_title("Find Product", fontsize=10)
-    ax.tick_params(axis='x', labelrotation=45, labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-    st.pyplot(fig)
-    client.close()
 
 def manual_product_search():
     product_name_input = st.session_state.get("product_name_input", "")
@@ -1365,18 +1308,185 @@ def nlp_product_search():
                         st.session_state.pop("nlp_product_search_results", None)
                         st.session_state["selected_product"] = None
 
+# def display_product_search_results(mode="manual"):
+#     if mode == "manual":
+#         products = st.session_state.get("manual_product_search_results", [])
+#     else:
+#         products = st.session_state.get("nlp_product_search_results", [])
+
+#     if not products:
+#         st.info("No results to display yet. Please perform a search.")
+#         return
+
+#     # Convert to DataFrame
+#     df = pd.DataFrame(products)
+
+#     # ------------------ Deduplicate columns ------------------
+#     # Append suffixes to duplicate columns
+#     cols = pd.io.parsers.ParserBase({'names': df.columns})._maybe_dedup_names(df.columns)
+#     df.columns = cols
+
+#     # ------------------ Fallback columns ------------------
+#     product_id_col = "product_id" if "product_id" in df.columns else df.columns[0]
+#     product_name_col = "product_name" if "product_name" in df.columns else df.columns[1] if len(df.columns) > 1 else df.columns[0]
+
+#     display_cols = [
+#         product_id_col,
+#         product_name_col,
+#         "product_type" if "product_type" in df.columns else None,
+#         "product_category" if "product_category" in df.columns else None,
+#         "interest_rate" if "interest_rate" in df.columns else None,
+#         "credit_limit_min" if "credit_limit_min" in df.columns else None,
+#         "credit_limit_max" if "credit_limit_max" in df.columns else None,
+#         "minimum_income_required" if "minimum_income_required" in df.columns else None,
+#         "minimum_credit_score" if "minimum_credit_score" in df.columns else None,
+#         "maximum_debt_to_income" if "maximum_debt_to_income" in df.columns else None,
+#         "annual_fee" if "annual_fee" in df.columns else None,
+#         "rewards_program" if "rewards_program" in df.columns else None,
+#         "benefits" if "benefits" in df.columns else None,
+#         "eligibility_criteria" if "eligibility_criteria" in df.columns else None,
+#         "is_active" if "is_active" in df.columns else None,
+#         "created_at" if "created_at" in df.columns else None,
+#         "updated_at" if "updated_at" in df.columns else None,
+#     ]
+#     display_cols = [col for col in display_cols if col is not None]
+
+#     display_df = df[display_cols].rename(
+#         columns={
+#             product_id_col: "Product ID",
+#             product_name_col: "Product Name",
+#             "product_type": "Type",
+#             "product_category": "Category",
+#             "interest_rate": "Interest Rate",
+#             "credit_limit_min": "Credit Limit Min",
+#             "credit_limit_max": "Credit Limit Max",
+#             "minimum_income_required": "Minimum Income Required",
+#             "minimum_credit_score": "Minimum Credit Score",
+#             "maximum_debt_to_income": "Maximum Debt to Income",
+#             "annual_fee": "Annual Fee",
+#             "rewards_program": "Rewards Program",
+#             "benefits": "Benefits",
+#             "eligibility_criteria": "Eligibility Criteria",
+#             "is_active": "Active",
+#             "created_at": "Created At",
+#             "updated_at": "Updated At",
+#         }
+#     )
+
+#     # ------------------ AgGrid Setup ------------------
+#     gb = GridOptionsBuilder.from_dataframe(display_df)
+#     gb.configure_selection(
+#         selection_mode="single",
+#         use_checkbox=True,
+#         suppressRowClickSelection=True,
+#     )
+#     gb.configure_pagination(paginationAutoPageSize=True)
+#     gb.configure_default_column(
+#         editable=False,
+#         filter=True,
+#         sortable=True,
+#         resizable=True,
+#         cellStyle=JsCode(
+#             """
+#             function(params) {
+#                 if (params.node.isSelected()) {
+#                     return {'backgroundColor': '#f7e6ff'};
+#                 } else if (params.rowIndex % 2 === 0) {
+#                     return {'backgroundColor': '#f9f9f9'};
+#                 }
+#             }
+#             """
+#         ),
+#     )
+
+#     # ------------------ Column headers ------------------
+#     gb.configure_column("Product Name", header_name="🏦 Product Name", tooltipField="Product Name")
+#     gb.configure_column("Type", header_name="🗂 Type", tooltipField="Type")
+#     gb.configure_column("Category", header_name="📦 Category", tooltipField="Category")
+#     gb.configure_column("Interest Rate", header_name="💲 Interest Rate", tooltipField="Interest Rate")
+#     gb.configure_column("Annual Fee", header_name="💸 Annual Fee", tooltipField="Annual Fee")
+#     gb.configure_column("Active", header_name="✅ Active", tooltipField="Active")
+#     gb.configure_column("Credit Limit Min", header_name="🔢 Credit Limit Min", tooltipField="Credit Limit Min")
+#     gb.configure_column("Credit Limit Max", header_name="🔢 Credit Limit Max", tooltipField="Credit Limit Max")
+#     gb.configure_column("Minimum Income Required", header_name="💼 Minimum Income Required", tooltipField="Minimum Income Required")
+#     gb.configure_column("Minimum Credit Score", header_name="📊 Minimum Credit Score", tooltipField="Minimum Credit Score")
+#     gb.configure_column("Maximum Debt to Income", header_name="📉 Max Debt/Income", tooltipField="Maximum Debt to Income")
+#     gb.configure_column("Rewards Program", header_name="🎁 Rewards Program", tooltipField="Rewards Program")
+#     gb.configure_column("Benefits", header_name="⭐ Benefits", tooltipField="Benefits")
+#     gb.configure_column("Eligibility Criteria", header_name="📝 Eligibility Criteria", tooltipField="Eligibility Criteria")
+#     gb.configure_column("Created At", header_name="🕒 Created At", tooltipField="Created At")
+#     gb.configure_column("Updated At", header_name="🕒 Updated At", tooltipField="Updated At")
+
+#     grid_options = gb.build()
+
+#     grid_response = AgGrid(
+#         display_df,
+#         gridOptions=grid_options,
+#         update_mode=GridUpdateMode.SELECTION_CHANGED,
+#         theme="material",
+#         height=480,
+#         fit_columns_on_grid_load=True,
+#         allow_unsafe_jscode=True,
+#         key=f"aggrid_product_{mode}",
+#     )
+
+#     # ------------------ Handle selection ------------------
+#     selected_rows = grid_response.get("selected_rows") or []
+#     if isinstance(selected_rows, pd.DataFrame):
+#         selected_rows = selected_rows.to_dict(orient="records")
+
+#     if selected_rows:
+#         st.session_state["selected_product"] = selected_rows[0]
+#         st.success(
+#             f"✅ Selected: {selected_rows[0].get('Product Name')} (ID: {selected_rows[0].get('Product ID')})"
+#         )
+#     else:
+#         st.session_state["selected_product"] = None
+#         st.info("ℹ️ Please select a product from the table above to proceed.")
+
+
 def display_product_search_results(mode="manual"):
+    import hashlib
+    import pandas as pd
+    from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
+    import streamlit as st
+
+    # --- Fetch data from session ---
     if mode == "manual":
         products = st.session_state.get("manual_product_search_results", [])
     else:
         products = st.session_state.get("nlp_product_search_results", [])
+        nlp_query_text = st.session_state.get("current_product_nlp_query", "")
+        if nlp_query_text:
+            log_product_query_to_mongo(nlp_query_text)
 
     if not products:
         st.info("No results to display yet. Please perform a search.")
         return
 
-    df = pd.DataFrame(products)
-    # Define Product ID col fallback
+    # --- Deduplicate keys in each dict to avoid DataFrame issues ---
+    cleaned_products = []
+    for p in products:
+        new_p = {}
+        for k, v in p.items():
+            if k not in new_p:
+                new_p[k] = v
+            else:
+                count = 1
+                new_k = f"{k}_{count}"
+                while new_k in new_p:
+                    count += 1
+                    new_k = f"{k}_{count}"
+                new_p[new_k] = v
+        cleaned_products.append(new_p)
+
+    # --- Convert to DataFrame ---
+    df = pd.DataFrame(cleaned_products)
+    if df.empty:
+        st.info("No valid product records found.")
+        return
+
+    # --- Determine display columns ---
     product_id_col = "product_id" if "product_id" in df.columns else df.columns[0]
     product_name_col = "product_name" if "product_name" in df.columns else df.columns[1] if len(df.columns) > 1 else df.columns[0]
 
@@ -1388,16 +1498,7 @@ def display_product_search_results(mode="manual"):
         "interest_rate" if "interest_rate" in df.columns else None,
         "credit_limit_min" if "credit_limit_min" in df.columns else None,
         "credit_limit_max" if "credit_limit_max" in df.columns else None,
-        "minimum_income_required" if "minimum_income_required" in df.columns else None,
-        "minimum_credit_score" if "minimum_credit_score" in df.columns else None,
-        "maximum_debt_to_income" if "maximum_debt_to_income" in df.columns else None,
         "annual_fee" if "annual_fee" in df.columns else None,
-        "rewards_program" if "rewards_program" in df.columns else None,
-        "benefits" if "benefits" in df.columns else None,
-        "eligibility_criteria" if "eligibility_criteria" in df.columns else None,
-        "is_active" if "is_active" in df.columns else None,
-        "created_at" if "created_at" in df.columns else None,
-        "updated_at" if "updated_at" in df.columns else None,
     ]
     display_cols = [col for col in display_cols if col is not None]
 
@@ -1410,26 +1511,28 @@ def display_product_search_results(mode="manual"):
             "interest_rate": "Interest Rate",
             "credit_limit_min": "Credit Limit Min",
             "credit_limit_max": "Credit Limit Max",
-            "minimum_income_required": "Minimum Income Required",
-            "minimum_credit_score": "Minimum Credit Score",
-            "maximum_debt_to_income": "Maximum Debt to Income",
             "annual_fee": "Annual Fee",
-            "rewards_program": "Rewards Program",
-            "benefits": "Benefits",
-            "eligibility_criteria": "Eligibility Criteria",
-            "is_active": "Active",
-            "created_at": "Created At",
-            "updated_at": "Updated At",
         }
     )
 
+    # --- Ensure unique column names (after renaming) ---
+    cols = pd.Series(display_df.columns)
+    for dup in cols[cols.duplicated()].unique():
+        dup_idx = cols[cols == dup].index
+        for i, idx in enumerate(dup_idx):
+            if i == 0:
+                continue
+            cols[idx] = f"{cols[idx]}_{i}"
+    display_df.columns = cols
+
+    # --- AgGrid Setup ---
     gb = GridOptionsBuilder.from_dataframe(display_df)
     gb.configure_selection(
         selection_mode="single",
         use_checkbox=True,
         suppressRowClickSelection=True,
     )
-    gb.configure_pagination(paginationAutoPageSize=True)
+    gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=20)
     gb.configure_default_column(
         editable=False,
         filter=True,
@@ -1447,40 +1550,40 @@ def display_product_search_results(mode="manual"):
             """
         ),
     )
-    gb.configure_column("Product Name", header_name="🏦 Product Name", tooltipField="Product Name")
-    gb.configure_column("Type", header_name="🗂 Type", tooltipField="Type")
-    gb.configure_column("Category", header_name="📦 Category", tooltipField="Category")
-    gb.configure_column("Interest Rate", header_name="💲 Interest Rate", tooltipField="Interest Rate")
-    gb.configure_column("Annual Fee", header_name="💸 Annual Fee", tooltipField="Annual Fee")
-    gb.configure_column("Active", header_name="✅ Active", tooltipField="Active")
-    gb.configure_column("Credit Limit Min", header_name="🔢 Credit Limit Min", tooltipField="Credit Limit Min")
-    gb.configure_column("Credit Limit Max", header_name="🔢 Credit Limit Max", tooltipField="Credit Limit Max")
-    gb.configure_column("Minimum Income Required", header_name="💼 Minimum Income Required", tooltipField="Minimum Income Required")
-    gb.configure_column("Minimum Credit Score", header_name="📊 Minimum Credit Score", tooltipField="Minimum Credit Score")
-    gb.configure_column("Maximum Debt to Income", header_name="📉 Max Debt/Income", tooltipField="Maximum Debt to Income")
-    gb.configure_column("Rewards Program", header_name="🎁 Rewards Program", tooltipField="Rewards Program")
-    gb.configure_column("Benefits", header_name="⭐ Benefits", tooltipField="Benefits")
-    gb.configure_column("Eligibility Criteria", header_name="📝 Eligibility Criteria", tooltipField="Eligibility Criteria")
-    gb.configure_column("Created At", header_name="🕒 Created At", tooltipField="Created At")
-    gb.configure_column("Updated At", header_name="🕒 Updated At", tooltipField="Updated At")
 
-    grid_options = gb.build()
+    # --- Column headers with emojis ---
+    header_mapping = {
+        "Product Name": "🏦 Product Name",
+        "Type": "🗂 Type",
+        "Category": "📦 Category",
+        "Interest Rate": "💲 Interest Rate",
+        "Annual Fee": "💸 Annual Fee",
+        "Credit Limit Min": "🔢 Credit Limit Min",
+        "Credit Limit Max": "🔢 Credit Limit Max",
+    }
+    for col, header in header_mapping.items():
+        if col in display_df.columns:
+            gb.configure_column(col, header_name=header, tooltipField=col)
 
+    # --- Dynamic key to refresh AgGrid when columns change ---
+    query_columns = "_".join(sorted(display_df.columns))
+    grid_key = f"aggrid_product_{mode}_{hashlib.md5(query_columns.encode()).hexdigest()}"
+
+    # --- Display AgGrid ---
     grid_response = AgGrid(
         display_df,
-        gridOptions=grid_options,
+        gridOptions=gb.build(),
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         theme="material",
         height=480,
-        fit_columns_on_grid_load=True,
+        fit_columns_on_grid_load=False,
         allow_unsafe_jscode=True,
-        key=f"aggrid_product_{mode}",
+        key=grid_key,
     )
 
-    selected_rows = grid_response.get("selected_rows")
-    if selected_rows is None:
-        selected_rows = []
-    elif isinstance(selected_rows, pd.DataFrame):
+    # --- Handle selection ---
+    selected_rows = grid_response.get("selected_rows") or []
+    if isinstance(selected_rows, pd.DataFrame):
         selected_rows = selected_rows.to_dict(orient="records")
 
     if selected_rows:
@@ -1491,6 +1594,7 @@ def display_product_search_results(mode="manual"):
     else:
         st.session_state["selected_product"] = None
         st.info("ℹ️ Please select a product from the table above to proceed.")
+
 
 
 def product_details_tab():
@@ -1605,6 +1709,87 @@ def manual_product_search():
             except Exception as e:
                 st.error(f"Failed to fetch data: {e}")
 
+# def nlp_product_search():
+#     nl_query = st.text_area(
+#         "Enter your query in natural language",
+#         height=100,
+#         placeholder="e.g. Show me premium credit cards with cashback",
+#         key="nl_product_query_input",
+#     )
+
+#     generate_clicked = st.button("Generate SQL", key="generate_product_sql_button")
+
+#     if generate_clicked:
+#         if not nl_query.strip():
+#             st.error("Please enter a natural language query.")
+#             st.session_state.pop("generated_product_sql", None)
+#             st.session_state.pop("nlp_product_search_results", None)
+#             st.session_state["selected_product"] = None
+#         else:
+#             with st.spinner("Generating SQL..."):
+#                 try:
+#                     response = requests.post(
+#                         "http://askdata-api-backend:5004/generate_product_sql",
+#                         json={"nl_query": nl_query},
+#                     )
+#                     response.raise_for_status()
+#                     sql_query = response.json().get("sql", "")
+#                     if sql_query:
+#                         st.session_state["generated_product_sql"] = sql_query
+#                         st.success("✅ SQL query generated successfully!")
+#                         st.session_state.pop("nlp_product_search_results", None)
+#                         st.session_state["selected_product"] = None
+#                     else:
+#                         st.info("⚠️ No SQL query returned from backend.")
+#                         st.session_state.pop("generated_product_sql", None)
+#                         st.session_state.pop("nlp_product_search_results", None)
+#                         st.session_state["selected_product"] = None
+#                 except Exception as e:
+#                     st.error(f"Error generating SQL: {e}")
+#                     st.session_state.pop("generated_product_sql", None)
+#                     st.session_state.pop("nlp_product_search_results", None)
+#                     st.session_state["selected_product"] = None
+
+#     sql_query = st.session_state.get("generated_product_sql", "")
+
+#     if sql_query:
+#         edited_sql = st.text_area(
+#             "Edit SQL if needed",
+#             value=sql_query,
+#             height=150,
+#             key="edited_product_sql_input",
+#         )
+
+#         run_clicked = st.button("Run SQL", key="run_product_sql_button")
+
+#         if run_clicked:
+#             if not edited_sql.strip():
+#                 st.error("SQL query cannot be empty.")
+#                 st.session_state.pop("nlp_product_search_results", None)
+#                 st.session_state["selected_product"] = None
+#             else:
+#                 with st.spinner("Running SQL query..."):
+#                     try:
+#                         response = requests.post(
+#                             "http://askdata-api-backend:5004/run_custom_product_query",
+#                             json={"sql_query": edited_sql},
+#                         )
+#                         response.raise_for_status()
+#                         results = response.json().get("results", [])
+#                         if results:
+#                             st.session_state["nlp_product_search_results"] = results
+#                             st.session_state["selected_product"] = None
+#                         else:
+#                             st.warning(
+#                                 "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+#                             )
+#                             st.session_state["nlp_product_search_results"] = []
+#                             st.session_state["selected_product"] = None
+#                     except Exception as e:
+#                         st.error(f"Error running SQL query: {e}")
+#                         st.session_state.pop("nlp_product_search_results", None)
+#                         st.session_state["selected_product"] = None
+
 def nlp_product_search():
     nl_query = st.text_area(
         "Enter your query in natural language",
@@ -1622,6 +1807,10 @@ def nlp_product_search():
             st.session_state.pop("nlp_product_search_results", None)
             st.session_state["selected_product"] = None
         else:
+            # --- Log NLP product query for KPI chart ---
+            current_user = st.session_state.get("username", "unknown")
+            log_product_query_to_mongo(nl_query, current_user)
+
             with st.spinner("Generating SQL..."):
                 try:
                     response = requests.post(
@@ -1647,7 +1836,6 @@ def nlp_product_search():
                     st.session_state["selected_product"] = None
 
     sql_query = st.session_state.get("generated_product_sql", "")
-
     if sql_query:
         edited_sql = st.text_area(
             "Edit SQL if needed",
@@ -1657,7 +1845,6 @@ def nlp_product_search():
         )
 
         run_clicked = st.button("Run SQL", key="run_product_sql_button")
-
         if run_clicked:
             if not edited_sql.strip():
                 st.error("SQL query cannot be empty.")
@@ -1685,6 +1872,7 @@ def nlp_product_search():
                         st.error(f"Error running SQL query: {e}")
                         st.session_state.pop("nlp_product_search_results", None)
                         st.session_state["selected_product"] = None
+
 
 def display_product_search_results(mode="manual"):
     if mode == "manual":
@@ -1995,6 +2183,28 @@ def log_query_to_mongo(query_text: str):
     )
 
     client.close()
+    
+def log_product_query_to_mongo(query_text: str, user: str = "unknown"):
+    """
+    Log a product query to MongoDB by incrementing the query_count for the current date and query text.
+    """
+    client = get_mongo_client()
+    db = client.askdata_mongo
+    collection = db.product_queries
+
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    collection.update_one(
+        {"date": today_str, "query": query_text, "user": user},
+        {
+            "$inc": {"query_count": 1},
+            "$setOnInsert": {"date": today_str, "timestamp": datetime.utcnow()}
+        },
+        upsert=True
+    )
+    client.close()
+
+
+    
 # --- Main app ---
 def main():
     token = authenticate_user()
@@ -2028,7 +2238,7 @@ def main():
         elif page == "customer_details":
             with tabs[0]:
                 customer_details_tab()
-                display_results_with_chart()
+                #display_results_with_chart()
             with tabs[1]:
                 product_search_tab()
         elif page == "product_details":

@@ -291,7 +291,9 @@ services:
     networks:
       - app-network
     # Default command: Run ML batch processing
-    command: ["python", "-m", "src.recommendation_engine.ml_batch_runner", "--mode", "full", "--limit", "100"]
+    #command: ["python", "-m", "src.recommendation_engine.ml_batch_runner", "--mode", "full", "--limit", "100"]
+    command: sh -c "python src/main.py --source oltp --limit 2000 && python -m src.recommendation_engine.ml_batch_runner --mode full --limit 100"
+
 
 volumes:
   mongo-data:
@@ -303,6 +305,6 @@ volumes:
   
 networks:
   app-network:
-    driver: bridge
+   driver: bridge
 
 

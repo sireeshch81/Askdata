@@ -17,7 +17,7 @@ if not MONGODB_URI:
     auth_part = f"{MONGO_USER}:{MONGO_PASS}@" if MONGO_USER and MONGO_PASS else ""
     MONGODB_URI = f"mongodb://{auth_part}{MONGO_HOST}:{MONGO_PORT}/"
 
-MONGODB_DB = os.getenv("MONGODB_DB") or os.getenv("MONGO_DATABASE", "askdata")
+MONGODB_DB = os.getenv("MONGODB_DB") or os.getenv("MONGO_DATABASE", "askdata_mongo")
 RECOMMENDATIONS_COLLECTION = os.getenv("RECOMMENDATIONS_COLLECTION", "recommendations")
 OFFERS_COLLECTION = os.getenv("OFFERS_COLLECTION", "offers")
 CUSTOMER_PROFILES_COLLECTION = os.getenv("CUSTOMER_PROFILES_COLLECTION", "customer_profile")
