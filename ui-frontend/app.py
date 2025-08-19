@@ -1853,23 +1853,51 @@ def nlp_product_search():
             else:
                 with st.spinner("Running SQL query..."):
                     try:
+                        # Get JWT token from session
+                        token = st.session_state.get("token", {})
+                        access_token = token.get("access_token", "")
+                        
+                        headers = {"Content-Type": "application/json"}
+                        if access_token:
+                            headers["Authorization"] = f"Bearer {access_token}"
+                        
                         response = requests.post(
                             "http://askdata-api-backend:5004/run_custom_product_query",
                             json={"sql_query": edited_sql},
+                            headers=headers,
                         )
-                        response.raise_for_status()
-                        results = response.json().get("results", [])
-                        if results:
-                            st.session_state["nlp_product_search_results"] = results
+                        
+                        if response.status_code == 200:
+                            results = response.json().get("results", [])
+                            if results:
+                                st.session_state["nlp_product_search_results"] = results
+                                st.session_state["selected_product"] = None
+                            else:
+                                st.warning(
+                                    "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+                                )
+                                st.session_state["nlp_product_search_results"] = []
+                                st.session_state["selected_product"] = None
+                        elif response.status_code == 401:
+                            st.error("❌ Authentication failed. Please log in again.")
+                            st.session_state.clear()
+                            st.rerun()
+                        elif response.status_code == 403:
+                            error_detail = response.json().get("detail", "Access denied")
+                            st.error(f"❌ {error_detail}")
+                            st.session_state.pop("nlp_product_search_results", None)
                             st.session_state["selected_product"] = None
                         else:
-                            st.warning(
-                                "⚠️ No products matched your search criteria. Please try different filters or check for typos."
-                            )
-                            st.session_state["nlp_product_search_results"] = []
+                            error_detail = response.json().get("detail", "Unknown error")
+                            st.error(f"❌ Error: {error_detail}")
+                            st.session_state.pop("nlp_product_search_results", None)
                             st.session_state["selected_product"] = None
+                    except requests.exceptions.RequestException as e:
+                        st.error(f"❌ Network error: {str(e)}")
+                        st.session_state.pop("nlp_product_search_results", None)
+                        st.session_state["selected_product"] = None
                     except Exception as e:
-                        st.error(f"Error running SQL query: {e}")
+                        st.error(f"❌ Error running SQL query: {e}")
                         st.session_state.pop("nlp_product_search_results", None)
                         st.session_state["selected_product"] = None
 

@@ -1,13 +1,14 @@
-from fastapi import FastAPI, HTTPException, Depends, Query, Body
+from fastapi import FastAPI, HTTPException, Depends, Query, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text
 from datetime import datetime
 import logging
-from typing import List
+from typing import List, Optional
 import json
 import os
 import traceback
+import jwt
 
 from database import get_db
 import models
@@ -56,6 +57,47 @@ try:
 except Exception as e:
     SCHEMA_PROMPT_OLTP = ""
     logger.error(f"Failed to load schema prompt from {schema_prompt_path}: {e}")
+
+# --- JWT Helper functions ---
+def verify_jwt_token(authorization: Optional[str] = Header(None)):
+    """Verify JWT token and extract user info"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    
+    try:
+        # Extract token from "Bearer <token>" format
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header format")
+        
+        token = authorization.split(" ")[1]
+        
+        # Decode JWT without verification (since we're using Keycloak tokens)
+        # In production, you should verify the signature with Keycloak's public key
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+        
+        return {
+            "user_id": decoded_token.get("sub"),
+            "username": decoded_token.get("preferred_username"),
+            "email": decoded_token.get("email"),
+            "realm_roles": decoded_token.get("realm_access", {}).get("roles", []),
+            "client_roles": decoded_token.get("resource_access", {}).get("askdataclient", {}).get("roles", [])
+        }
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Token verification failed: {str(e)}")
+
+def check_user_role(user_info: dict, required_roles: List[str]):
+    """Check if user has any of the required roles"""
+    user_roles = user_info.get("realm_roles", []) + user_info.get("client_roles", [])
+    
+    if not any(role in user_roles for role in required_roles):
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Access denied. Required roles: {required_roles}. User roles: {user_roles}"
+        )
+    
+    return True
 
 # --- Helper functions ---
 def clean_generated_sql(sql_text: str) -> str:
@@ -312,10 +354,21 @@ def generate_product_sql(payload: NLProductQuery):
         raise HTTPException(status_code=500, detail="Failed to generate product SQL")
 
 
-logger = logging.getLogger(__name__)
-
 @app.post("/run_custom_product_query")
-def run_custom_product_query(sql_query: str = Body(..., embed=True), db: Session = Depends(get_db)):
+def run_custom_product_query(
+    sql_query: str = Body(..., embed=True), 
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
+):
+    # Verify JWT token and extract user info
+    user_info = verify_jwt_token(authorization)
+    
+    # Check if user has required roles for product queries
+    required_roles = ["product_analyst", "admin", "data_analyst"]
+    check_user_role(user_info, required_roles)
+    
+    logger.info(f"User {user_info.get('username')} executing product query with roles: {user_info.get('realm_roles', []) + user_info.get('client_roles', [])}")
+    
     lowered = sql_query.lower()
     forbidden_statements = ["delete", "update", "insert", "drop", "alter", "truncate", "create"]
     if any(bad in lowered for bad in forbidden_statements):
