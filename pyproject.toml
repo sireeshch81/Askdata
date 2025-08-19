@@ -15,4 +15,5 @@ dependencies = [
     "scikit-learn>=1.1.0",
     "uliweb-alembic>=0.6.9",
     "uvicorn>=0.35.0",
+    "jwt (>=1.4.0,<2.0.0)",
 ]
