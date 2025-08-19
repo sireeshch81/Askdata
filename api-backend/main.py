@@ -74,7 +74,7 @@ def verify_jwt_token(authorization: Optional[str] = Header(None)):
         # Decode JWT without verification (since we're using Keycloak tokens)
         # In production, you should verify the signature with Keycloak's public key
         decoded_token = jwt.decode(token, options={"verify_signature": False})
-        
+        print(decoded_token)
         return {
             "user_id": decoded_token.get("sub"),
             "username": decoded_token.get("preferred_username"),
@@ -364,7 +364,7 @@ def run_custom_product_query(
     user_info = verify_jwt_token(authorization)
     
     # Check if user has required roles for product queries
-    required_roles = ["product_analyst", "admin", "data_analyst"]
+    required_roles = ["MULTI_DB_USER"]  # For now test Multi
     check_user_role(user_info, required_roles)
     
     logger.info(f"User {user_info.get('username')} executing product query with roles: {user_info.get('realm_roles', []) + user_info.get('client_roles', [])}")
