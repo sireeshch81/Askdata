@@ -10,6 +10,8 @@ Rules:
 - Automatically choose the database:
     • Use askdata_oltp for recent data (within 6 months) and row-level queries.
     • Use askdata_dw for data older than 6 months or for aggregate queries (counts, totals, summaries).
+- Always include product_id in the SELECT clause when querying product-related data, even if the user query does not explicitly ask for it.
+
 - Prefer detailed row-level customer records unless the user explicitly requests aggregates.
 - Always alias aggregate columns explicitly using AS with meaningful names.
 - Avoid SELECT *; always list columns explicitly.
