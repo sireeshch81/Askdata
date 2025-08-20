@@ -4,7 +4,7 @@ from fastapi import HTTPException, Header
 import logging
 
 
-operational_roles = ["OLTP", "OPS"]
+operational_roles = ["OLTP", "OPS_USER"]
 historical_roles = ["MULTI_DB_USER","DW"]
 
 logging.basicConfig(
