@@ -376,10 +376,18 @@ def offer_customer(customer_id: int):
     
     for attempt in range(max_retries):
         try:
+            # Get JWT token from session
+            token = st.session_state.get("token", {})
+            access_token = token.get("access_token", "")
+
+            headers = {"Content-Type": "application/json"}
+            if access_token:
+                headers["Authorization"] = f"Bearer {access_token}"
+
             response = requests.post(
                 "http://dw-backend:5001/offer-customer",
                 json={"customer_id": str(customer_id)},
-                headers={"Content-Type": "application/json"},
+                headers=headers,
                 timeout=30
             )
             
@@ -506,9 +514,18 @@ def manual_customer_search():
                 if st.session_state["last_phone"]:
                     params["phone"] = st.session_state["last_phone"]
 
+                # Get JWT token from session
+                token = st.session_state.get("token", {})
+                access_token = token.get("access_token", "")
+
+                headers = {"Content-Type": "application/json"}
+                if access_token:
+                    headers["Authorization"] = f"Bearer {access_token}"
+
                 response = requests.get(
                     "http://askdata-api-backend:5004/customer_detail",
                     params=params,
+                    headers=headers,
                 )
                 if response.status_code == 200:
                     customers = response.json()
@@ -554,9 +571,18 @@ def nlp_customer_search():
         else:
             with st.spinner("Generating SQL..."):
                 try:
+                    # Get JWT token from session
+                    token = st.session_state.get("token", {})
+                    access_token = token.get("access_token", "")
+
+                    headers = {"Content-Type": "application/json"}
+                    if access_token:
+                        headers["Authorization"] = f"Bearer {access_token}"
+
                     response = requests.post(
                         "http://askdata-api-backend:5004/generate_sql",
                         json={"nl_query": nl_query},
+                        headers=headers,
                     )
                     response.raise_for_status()
                     sql_query = response.json().get("sql", "")
@@ -596,9 +622,18 @@ def nlp_customer_search():
             else:
                 with st.spinner("Running SQL query..."):
                     try:
+                        # Get JWT token from session
+                        token = st.session_state.get("token", {})
+                        access_token = token.get("access_token", "")
+
+                        headers = {"Content-Type": "application/json"}
+                        if access_token:
+                            headers["Authorization"] = f"Bearer {access_token}"
+
                         response = requests.post(
                             "http://askdata-api-backend:5004/run_custom_query",
                             json={"sql_query": edited_sql},
+                            headers=headers,
                         )
                         response.raise_for_status()
                         results = response.json().get("results", [])
@@ -1199,9 +1234,18 @@ def manual_product_search():
                 if st.session_state["last_product_category"]:
                     params["product_category"] = st.session_state["last_product_category"]
 
+                # Get JWT token from session
+                token = st.session_state.get("token", {})
+                access_token = token.get("access_token", "")
+
+                headers = {"Content-Type": "application/json"}
+                if access_token:
+                    headers["Authorization"] = f"Bearer {access_token}"
+
                 response = requests.get(
                     "http://askdata-api-backend:5004/products",
                     params=params,
+                    headers=headers,
                 )
                 if response.status_code == 200:
                     products = response.json()
@@ -1813,9 +1857,18 @@ def nlp_product_search():
 
             with st.spinner("Generating SQL..."):
                 try:
+                    # Get JWT token from session
+                    token = st.session_state.get("token", {})
+                    access_token = token.get("access_token", "")
+
+                    headers = {"Content-Type": "application/json"}
+                    if access_token:
+                        headers["Authorization"] = f"Bearer {access_token}"
+
                     response = requests.post(
                         "http://askdata-api-backend:5004/generate_product_sql",
                         json={"nl_query": nl_query},
+                        headers=headers,
                     )
                     response.raise_for_status()
                     sql_query = response.json().get("sql", "")
