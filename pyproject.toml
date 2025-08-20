@@ -16,7 +16,7 @@ dependencies = [
     "uliweb-alembic>=0.6.9",
     "uvicorn>=0.35.0",
     "jwt (>=1.4.0,<2.0.0)",
-    "streamlit (==1.42.0)",
+    "streamlit (==1.48.1)",
     "python-keycloak (>=5.8.1,<6.0.0)",
     "streamlit-aggrid (>=1.1.8,<2.0.0)",
     "plotly (>=5.0.0)",
