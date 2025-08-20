@@ -2,7 +2,7 @@
 name = "askdata-demo"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.13"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "auth>=0.5.3",
     "google-genai>=1.28.0",
@@ -15,4 +15,10 @@ dependencies = [
     "scikit-learn>=1.1.0",
     "uliweb-alembic>=0.6.9",
     "uvicorn>=0.35.0",
+    "jwt (>=1.4.0,<2.0.0)",
+    "streamlit (==1.48.1)",
+    "python-keycloak (>=5.8.1,<6.0.0)",
+    "streamlit-aggrid (>=1.1.8,<2.0.0)",
+    "plotly (>=5.0.0)",
+    "matplotlib (>=3.10.5,<4.0.0)",
 ]

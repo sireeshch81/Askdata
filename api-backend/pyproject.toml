@@ -20,6 +20,8 @@ dependencies = [
     "logging>=0.4.9.6",
     "DBUtils>=3.0.0",
     "google-genai>=1.28.0",
+    "PyJWT>=2.8.0",
+    "jwt (>=1.4.0,<2.0.0)",
 ]
 
 

@@ -1,13 +1,13 @@
-from fastapi import FastAPI, HTTPException, Depends, Query, Body
+from fastapi import FastAPI, HTTPException, Depends, Query, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text
 from datetime import datetime
+from typing import Optional
 import logging
-from typing import List
 import json
 import os
-import traceback
+from jwtPermissionCheck import *
 
 from database import get_db
 import models
@@ -18,7 +18,6 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-# Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -57,7 +56,6 @@ except Exception as e:
     SCHEMA_PROMPT_OLTP = ""
     logger.error(f"Failed to load schema prompt from {schema_prompt_path}: {e}")
 
-# --- Helper functions ---
 def clean_generated_sql(sql_text: str) -> str:
     sql_text = sql_text.strip()
     if sql_text.startswith("```sql"):
@@ -92,7 +90,7 @@ def rewrite_sql_with_explicit_columns(sql: str) -> str:
 
 # --- Health Check ---
 @app.get("/health")
-def health_check():
+def health_check(authorization: Optional[str] = Header(None)):
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 # --- Customer Detail Search ---
@@ -102,6 +100,7 @@ def get_customer_detail(
     email: str = Query(None),
     phone: str = Query(None),
     db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None),
 ):
     if not any([customer_name, email, phone]):
         raise HTTPException(status_code=400, detail="At least one search parameter must be provided.")
@@ -142,7 +141,7 @@ def get_customer_detail(
 
 # --- Recommendations ---
 @app.get("/recommendations", response_model=schemas.RecommendationsResponse)
-def get_recommendations(customer_id: str = Query(...)):
+def get_recommendations(customer_id: str = Query(...), authorization: Optional[str] = Header(None)):
     recommendation_manager = RecommendationDataManager()
     collection = recommendation_manager.find_by_customer_id(customer_id)
     if not collection:
@@ -157,7 +156,7 @@ def get_recommendations(customer_id: str = Query(...)):
 
 # --- Products ---
 @app.get("/products", response_model=List[schemas.ProductsResponse])
-def getProductsByProductName(product_name: str = Query(...), db: Session = Depends(get_db)):
+def getProductsByProductName(product_name: str = Query(...), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
     query = db.query(models.FinancialProduct)
     pattern = f"%{product_name}%"
     query = query.filter(models.FinancialProduct.product_name.ilike(pattern))
@@ -189,7 +188,7 @@ def getProductsByProductName(product_name: str = Query(...), db: Session = Depen
 
 # --- Recommendation Letter ---
 @app.get("/recommendation_letter", response_model=str)
-def get_recommendation_letter(customer_id: str = Query(...), db: Session = Depends(get_db)):
+def get_recommendation_letter(customer_id: str = Query(...), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
     recommendation_manager = RecommendationDataManager()
     collection = recommendation_manager.find_by_customer_id(customer_id)
     if not collection:
@@ -214,7 +213,7 @@ def get_recommendation_letter(customer_id: str = Query(...), db: Session = Depen
 
 # --- Simple Auth ---
 @app.post("/auth", response_model=schemas.AuthResponse)
-def authenticate(username: str = Query(...), password: str = Query(...)):
+def authenticate(username: str = Query(...), password: str = Query(...), authorization: Optional[str] = Header(None)):
     if username and password:
         return schemas.AuthResponse(access_token="stubbed.jwt.token", token_type="bearer")
     else:
@@ -222,7 +221,7 @@ def authenticate(username: str = Query(...), password: str = Query(...)):
 
 # --- NLP Customer SQL ---
 @app.post("/generate_sql")
-def generate_sql(nl_query: str = Body(..., embed=True)):
+def generate_sql(nl_query: str = Body(..., embed=True), authorization: Optional[str] = Header(None)):
     if not SCHEMA_PROMPT_OLTP:
         raise HTTPException(status_code=500, detail="Schema prompt not loaded")
     prompt = SCHEMA_PROMPT_OLTP.strip() + "\n\nGenerate SQL for request:\n" + nl_query.strip() + "\nSQL:"
@@ -238,7 +237,7 @@ def generate_sql(nl_query: str = Body(..., embed=True)):
         raise HTTPException(status_code=500, detail="Failed to generate SQL")
 
 @app.post("/run_custom_query")
-def run_custom_query(sql_query: str = Body(..., embed=True), db: Session = Depends(get_db)):
+def run_custom_query(sql_query: str = Body(..., embed=True), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
     lowered = sql_query.lower()
     forbidden_statements = ["delete", "update", "insert", "drop", "alter", "truncate", "create"]
     if any(bad in lowered for bad in forbidden_statements):
@@ -251,7 +250,7 @@ def run_custom_query(sql_query: str = Body(..., embed=True), db: Session = Depen
         raise HTTPException(status_code=400, detail=f"SQL execution error: {e}")
 
 @app.post("/nlp_customer_search")
-def nlp_customer_search(nl_query: str = Body(..., embed=True), db: Session = Depends(get_db)):
+def nlp_customer_search(nl_query: str = Body(..., embed=True), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
     if not SCHEMA_PROMPT_OLTP:
         raise HTTPException(status_code=500, detail="Schema prompt not loaded")
     prompt = SCHEMA_PROMPT_OLTP.strip() + "\n\nGenerate SQL for customer search:\n" + nl_query.strip() + "\nSQL:"
@@ -305,7 +304,7 @@ def ensure_product_id(sql: str) -> str:
     return sql
 
 @app.post("/generate_product_sql")
-def generate_product_sql(payload: NLProductQuery):
+def generate_product_sql(payload: NLProductQuery, authorization: Optional[str] = Header(None)):
     nl_query = payload.nl_query
     if not nl_query:
         raise HTTPException(status_code=400, detail="Empty query")
@@ -334,10 +333,15 @@ def generate_product_sql(payload: NLProductQuery):
         raise HTTPException(status_code=500, detail="Failed to generate product SQL")
 
 
-logger = logging.getLogger(__name__)
-
 @app.post("/run_custom_product_query")
-def run_custom_product_query(sql_query: str = Body(..., embed=True), db: Session = Depends(get_db)):
+def run_custom_product_query(
+    sql_query: str = Body(..., embed=True), 
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
+):
+    user_info = verify_jwt_token(authorization)
+    check_user_role_operational(user_info)
+
     lowered = sql_query.lower()
     forbidden_statements = ["delete", "update", "insert", "drop", "alter", "truncate", "create"]
     if any(bad in lowered for bad in forbidden_statements):
