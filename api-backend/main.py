@@ -293,22 +293,44 @@ class NLProductQuery(BaseModel):
 
 class CustomProductSQLQuery(BaseModel):
     sql_query: str
+    
+def ensure_product_id(sql: str) -> str:
+    """Guarantee product_id is included in SELECT clause."""
+    lowered = sql.lower()
+    if "select" in lowered and "product_id" not in lowered:
+        # only patch SELECT at the start of query
+        if lowered.strip().startswith("select"):
+            sql = sql.replace("SELECT", "SELECT product_id,", 1)
+            sql = sql.replace("select", "select product_id,", 1)
+    return sql
 
 @app.post("/generate_product_sql")
 def generate_product_sql(payload: NLProductQuery):
     nl_query = payload.nl_query
     if not nl_query:
         raise HTTPException(status_code=400, detail="Empty query")
-    prompt = SCHEMA_PROMPT_OLTP.strip() + "\n\nGenerate SQL for product search:\n" + nl_query.strip() + "\nSQL:"
+
+    prompt = (
+        SCHEMA_PROMPT_OLTP.strip()
+        + "\n\nGenerate SQL for product search. "
+        + "Always include product_id in the SELECT clause, even if not explicitly asked.\n"
+        + nl_query.strip()
+        + "\nSQL:"
+    )
+
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
-            config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0)),
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_budget=0)
+            ),
         )
         sql_text = clean_generated_sql(response.text)
+        sql_text = ensure_product_id(sql_text)  # <-- enforce product_id
         return {"sql": sql_text}
     except Exception as e:
+        logger.exception("Error generating product SQL")
         raise HTTPException(status_code=500, detail="Failed to generate product SQL")
 
 
