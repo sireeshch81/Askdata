@@ -47,6 +47,13 @@ RUN apt-get install -y --no-install-recommends software-properties-common \
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
+# Install Java
+RUN curl -O https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558476027ac/13/GPL/openjdk-21.0.2_linux-x64_bin.tar.gz \
+    && tar -xf openjdk-21.0.2_linux-x64_bin.tar.gz \
+    && rm openjdk-21.0.2_linux-x64_bin.tar.gz \
+    && mkdir -p /usr/lib/jvm \
+    && mv jdk-21.0.2 /usr/lib/jvm/openjdk-21
+
 WORKDIR /app
 
 COPY pyproject.toml .
@@ -57,16 +64,80 @@ RUN python3.12 -m venv /app/.venv \
     && pip install --upgrade pip \
     && pip install uv
 
-RUN . /app/.venv/bin/activate && uv pip install --no-cache-dir \
-    "pandas>=2.2.0"
+RUN . /app/.venv/bin/activate && uv pip install --no-cache-dir "pandas>=2.2.0" \
+    && uv pip install -r requirements.txt --no-cache-dir
 
+RUN . /app/.venv/bin/activate \
+    && uv pip install --upgrade certifi \
+    && python3 -m pip install --upgrade setuptools wheel pip \
 
+# Stage 2: runtime
+FROM ubuntu:noble AS runtime
 
+LABEL authors="Kelly Firkins"
+ARG APPUSER="appuser"
+ARG APPUSER_UID=2000
+ARG APPUSER_GID=100
 
+# Configure apt for better reliability
+RUN echo 'Acquire::http::Timeout "300";' > /etc/apt/apt.conf.d/99timeout \
+    && echo 'Acquire::Retries "3";' >> /etc/apt/apt.conf.d/99timeout
 
+ENV DEBIAN_FRONTEND=noninteractive
 
+# Install ca-certificates first in runtime stage and add Zscaler cert before any apt operations
+RUN apt-get update -y && apt-get install -y --no-install-recommends ca-certificates
 
+# Copy Zscaler root certificate from builder to runtime
+COPY --from=builder /usr/local/share/ca-certificates/zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
 
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
+# Install only runtime dependencies
+RUN apt-get update -y && apt-get upgrade -y \
+    # TODO: Remove sudo & vim once image is stable
+    && apt-get install -y --no-install-recommends software-properties-common sudo vim netcat-openbsd \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get install -y --no-install-recommends \
+    git \
+    libpq5 \
+    unixodbc \
+    python3.12 \
+    python3-venv \
+    libkrb5-3 \
+    krb5-config \
+    krb5-user \
+    libaio1t64 \
+    && apt-get remove -y software-properties-common \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+
+COPY --from=builder /usr/lib/jvm/openjdk-21 /usr/lib/jvm/openjdk-21
+COPY .env .
+
+# Clear out the laptop's VENV if it exists following the copy above
+RUN rm -rf /app/.venv/ || true \
+    && python3.12 -m venv /app/.venv
+
+COPY --from=builder /app/.venv /app/.venv
+
+ENV PATH="/app/.venv/bin:${JAVA_HOME}/bin:${PATH}"
+
+RUN useradd -m -s /bin/bash -N -u ${APPUSER_UID} ${APPUSER} \
+    && chmod g+w /etc/passwd
+
+RUN rm -rf /usr/lib/python3.12/test/certdata/ || true \
+    && rm /app/.venv/lib/python3.12/site-packages/tornado/test/test.key || true
+
+RUN chown -R ${APPUSER}:${APPUSER_GID} /app
+
+USER ${APPUSER}
+
+EXPOSE 6000
+
+# CMD ["/app/server_startup.sh"]
 ENTRYPOINT ["top", "-b"]
