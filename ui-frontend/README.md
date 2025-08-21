@@ -74,3 +74,15 @@ The frontend application makes calls to the following services and endpoints:
 ## Authentication & Authorization
 
 The application uses Keycloak for user authentication and JWT tokens for API authorization. Some endpoints require Bearer token authentication in headers.
+
+### Exporting Keycloak realms, clients, users and roles from the keycloak container
+- 1. Find the docker container id with the command 
+      docker ps
+      docker exec -it <container-id> bash
+- 2. Run the below command to export all the keycloak data to a json file.
+      /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm <your-realm> --users realm_file
+
+- 3. exit the docker container.
+
+- 4. Copy the exported json file to the askdata-demo/keycloak/import/ directory.
+      docker cp <container-id>:/opt/keycloak/data/import/<your-realm>-realm.json /<path/on/your/host>
