@@ -57,6 +57,7 @@ RUN curl -O https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558
 WORKDIR /app
 
 COPY pyproject.toml .
+COPY .venv .
 
 RUN python3.12 -m venv /app/.venv \
     && . /app/.venv/bin/activate \
@@ -65,11 +66,11 @@ RUN python3.12 -m venv /app/.venv \
     && pip install uv
 
 RUN . /app/.venv/bin/activate && uv pip install --no-cache-dir "pandas>=2.2.0" \
-    && uv pip install -r requirements.txt --no-cache-dir
+    && uv sync
 
 RUN . /app/.venv/bin/activate \
     && uv pip install --upgrade certifi \
-    && python3 -m pip install --upgrade setuptools wheel pip \
+    && python3 -m pip install --upgrade setuptools wheel pip
 
 # Stage 2: runtime
 FROM ubuntu:noble AS runtime
@@ -93,10 +94,10 @@ COPY --from=builder /usr/local/share/ca-certificates/zscaler-root.crt /usr/local
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PYTHONUNBUFFERED=1
 
 # Install only runtime dependencies
 RUN apt-get update -y && apt-get upgrade -y \
-    # TODO: Remove sudo & vim once image is stable
     && apt-get install -y --no-install-recommends software-properties-common sudo vim netcat-openbsd \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get install -y --no-install-recommends \
