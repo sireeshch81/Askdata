@@ -294,6 +294,48 @@ services:
     #command: ["python", "-m", "src.recommendation_engine.ml_batch_runner", "--mode", "full", "--limit", "100"]
     command: sh -c "python src/main.py --source oltp --limit 2000 && python -m src.recommendation_engine.ml_batch_runner --mode full --limit 100"
 
+  # HAProxy
+  # - HTTP frontend on port 8000 with path-based routing:
+  #   * /dw-backend -> dw-backend:5001
+  #   * /oltp-backend -> oltp-backend:5002  
+  #   * /api-backend -> api-backend:5004
+  #   * /etl-services -> etl-services:5003
+  #   * /recommendation-service -> recommendation-service:5005
+  #   * /ui-frontend -> ui-frontend:8501
+  #   * /vectordb -> vectordb:8000
+  #   * /keycloak -> keycloak:8080
+  # - TCP proxy frontends for databases: (Maybe just delete these & rely upon Docker networking/naming)
+  #   * MySQL OLTP: port 13306 -> oltp-db:3306
+  #   * MySQL DW: port 13307 -> dw-db:3306
+  #   * MongoDB: port 17017 -> mongodb:27017
+  #   * PostgreSQL: port 15432 -> keycloak-db:5432
+#  proxy:
+#    image: haproxy:2.8-alpine
+#    container_name: askdata-proxy
+#    ports:
+#      - "8000:8000"     # Main HTTP proxy port
+#      - "13306:13306"   # MySQL OLTP proxy port
+#      - "13307:13307"   # MySQL DW proxy port
+#      - "17017:17017"   # MongoDB proxy port
+#      - "15432:15432"   # PostgreSQL proxy port
+#    volumes:
+#      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+#    depends_on:
+#      - dw-backend
+#      - oltp-backend
+#      - api-backend
+#      - etl-services
+#      - recommendation-service
+#      - ui-frontend
+#      - vectordb
+#      - keycloak
+#      - oltp-db
+#      - dw-db
+#      - mongodb
+#      - keycloak-db
+#    networks:
+#      - app-network
+#    restart: unless-stopped
 
 volumes:
   mongo-data:
