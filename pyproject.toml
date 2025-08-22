@@ -49,6 +49,4 @@ dependencies = [
 # motor - async mongo client that works well with uvicorn
 #       replaces pymongo
 
-# pandas-stubs - useful for IDE work
-
 
