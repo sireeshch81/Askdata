@@ -24,9 +24,9 @@ All sensitive credentials and configuration parameters are stored in the `.env` 
 
 ## Setup & Run
 
-1. Run `rebuild_askdata.sh` to build the shared container image.
-2. Run `docker compose build` to build each individual service container from the shared image.
-3. Run `docker compose up` to start all services.
+1. Run `rebuild_askdata_container.sh` to build the shared container image.
+2. Run `DOCKER_BUILDKIT=0 docker compose build` to build each individual service container from the shared image.
+3. Run `docker compose up -d` to start all services.
 
 
 ### Notes
