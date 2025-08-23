@@ -10,7 +10,7 @@ dependencies = [
     "psycopg2-binary", # PostgreSQL support
     "pymysql", # Add this for MySQL support
     "sqlalchemy",
-    "uv",
+    "uv>=0.8.13",
     "cryptography",
     "python-dotenv",
     "dotenv",
@@ -27,18 +27,18 @@ dependencies = [
     "python-dotenv>=1.0.0,<2.0.0",
     "scikit-learn>=1.1.0",
     "scipy>=1.11.0", # NEW: Required for scikit-learn
-    "streamlit (==1.48.1)",
+    "streamlit",
     "python-keycloak (>=5.8.1,<6.0.0)",
-    "streamlit-aggrid (>=1.1.8,<2.0.0)",
+    "streamlit-aggrid",
     "plotly (>=5.0.0)",
     "matplotlib (>=3.10.5,<4.0.0)",
     "langchain",
-    "langchain_openai",
+    "langchain_openai>=0.3.31",
     "python-dateutil>=2.8.0", # NEW: For date handling in ML features
     "psutil>=5.9.0",
     "pydantic>=1.8.0",
     "pytest>=7.0.0",
-    "requests",
+    "requests>=2.32.5",
     "plotly>=5.0.0",
     "certifi>=2025.8.3",
 ]
