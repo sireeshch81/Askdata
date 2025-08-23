@@ -9,6 +9,7 @@ from datetime import datetime
 from pymongo import MongoClient
 import hashlib
 import plotly.express as px
+import time
 
 
 st.set_page_config(layout="wide")
@@ -368,7 +369,7 @@ def offer_customer(customer_id: int):
     """
     Call the dw-backend API to offer customer products
     """
-    import time
+
     
     # Retry configuration
     max_retries = 3
@@ -620,11 +621,6 @@ def nlp_customer_search():
 # --- Display Search Results (manual or NLP) ---
 
 def display_search_results(mode="manual"):
-    import hashlib
-    import pandas as pd
-    from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-    import streamlit as st
-
     # --- Fetch data from session ---
     if mode == "manual":
         customers = st.session_state.get("manual_search_results", [])
@@ -637,6 +633,9 @@ def display_search_results(mode="manual"):
 
     df = pd.DataFrame(customers)
 
+    # --- Convert all values to strings to avoid serialization issues ---
+    df = df.astype(str)
+    
     # --- Ensure unique column names to avoid AgGrid / JSON errors ---
     cols = pd.Series(df.columns)
     for dup in cols[cols.duplicated()].unique():
@@ -773,6 +772,7 @@ def display_search_results(mode="manual"):
         height=480,
         fit_columns_on_grid_load=False,  # Disable auto-fit to allow scrolling
         allow_unsafe_jscode=True,
+        reload_data=True,
         key=grid_key,
     )
 
@@ -1306,11 +1306,6 @@ def nlp_product_search():
                         st.session_state["selected_product"] = None
 
 def display_product_search_results(mode="manual"):
-    import hashlib
-    import pandas as pd
-    from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-    import streamlit as st
-
     # --- Fetch data from session ---
     if mode == "manual":
         products = st.session_state.get("manual_product_search_results", [])
@@ -1457,6 +1452,7 @@ def display_product_search_results(mode="manual"):
         height=500,
         fit_columns_on_grid_load=False,
         allow_unsafe_jscode=True,
+        reload_data=True,
         key=grid_key,
     )
 
@@ -1649,11 +1645,6 @@ def nlp_product_search():
       
         
 def display_product_search_results(mode="manual"):
-    import hashlib
-    import pandas as pd
-    from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-    import streamlit as st
-
     # --- Fetch data from session ---
     if mode == "manual":
         products = st.session_state.get("manual_product_search_results", [])
@@ -1674,6 +1665,9 @@ def display_product_search_results(mode="manual"):
         st.info("No valid product records found.")
         return
 
+    # --- Convert all values to strings to avoid serialization issues ---
+    df = df.astype(str)
+    
     # --- Ensure unique column names ---
     cols = pd.Series(df.columns)
     for dup in cols[cols.duplicated()].unique():
@@ -1746,6 +1740,7 @@ def display_product_search_results(mode="manual"):
         height=480,
         fit_columns_on_grid_load=False,
         allow_unsafe_jscode=True,
+        reload_data=True,
         key=grid_key,
     )
 
