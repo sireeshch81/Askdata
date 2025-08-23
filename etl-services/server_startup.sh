@@ -15,5 +15,5 @@ fi
 echo "Starting ETL Services API server with Uvicorn..."
 
 # Activate virtual environment and start the server
-source /app/venv/bin/activate
+source /app/.venv/bin/activate
 exec uvicorn main:app --host 0.0.0.0 --port 5003
