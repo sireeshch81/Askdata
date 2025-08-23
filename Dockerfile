@@ -78,7 +78,7 @@ FROM ubuntu:noble AS runtime
 LABEL authors="Kelly Firkins"
 ARG APPUSER="appuser"
 ARG APPUSER_UID=2000
-ARG APPUSER_GID=100
+ARG APPUSER_GID=1000
 
 # Configure apt for better reliability
 RUN echo 'Acquire::http::Timeout "300";' > /etc/apt/apt.conf.d/99timeout \
@@ -126,19 +126,19 @@ RUN rm -rf /app/.venv/ || true \
 
 COPY --from=builder /app/.venv /app/.venv
 
-ENV PATH="/app/.venv/bin:${JAVA_HOME}/bin:${PATH}"
+ENV PATH="/app/.venv/bin:${PATH}"
 
-RUN useradd -m -s /bin/bash -N -u ${APPUSER_UID} ${APPUSER} \
+RUN useradd -m -s /bin/bash -U -u ${APPUSER_UID} ${APPUSER} \
     && chmod g+w /etc/passwd
 
 RUN rm -rf /usr/lib/python3.12/test/certdata/ || true \
     && rm /app/.venv/lib/python3.12/site-packages/tornado/test/test.key || true
 
-RUN chown -R ${APPUSER}:${APPUSER_GID} /app
+RUN touch /app/server_startup.sh && chown -R ${APPUSER}:users /app
 
-USER ${APPUSER}
+#USER ${APPUSER}
 
 EXPOSE 6000
 
 # CMD ["/app/server_startup.sh"]
-ENTRYPOINT ["top", "-b"]
+CMD ["/bin/bash"]

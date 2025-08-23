@@ -12,4 +12,4 @@ done
 echo "Mongo database is ready!"
 
 echo "Starting Backend API server with Uvicorn..."
-. /app/venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 5004
+. /app/.venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 5004
