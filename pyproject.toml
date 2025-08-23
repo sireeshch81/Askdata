@@ -5,12 +5,11 @@ description = "AskData RAG"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "alembic",
-    "uliweb-alembic>=0.6.9",
     "fastapi",
     "uvicorn",
     "psycopg2-binary", # PostgreSQL support
     "pymysql", # Add this for MySQL support
-    "sqlalchemy==2.0.43",
+    "sqlalchemy",
     "uv",
     "cryptography",
     "python-dotenv",
