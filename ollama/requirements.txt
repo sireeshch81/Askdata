@@ -1,2 +1,0 @@
-# Add Python dependencies here if you build a custom interface
-# For pure Ollama container, this can be left empty or omitted

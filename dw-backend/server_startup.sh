@@ -14,4 +14,4 @@ echo "Running database migrations..."
 cd /app/ && chmod ugo+x run_migrations.sh && ./run_migrations.sh
 
 echo "Starting DW Backend API server with Uvicorn..."
-. /app/venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 5001
+. /app/.venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 5001

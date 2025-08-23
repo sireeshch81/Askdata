@@ -2,4 +2,4 @@
 
 cd /app || exit 1
 . .env
-. /app/venv/bin/activate && alembic upgrade head
+. /app/.venv/bin/activate && alembic upgrade head
