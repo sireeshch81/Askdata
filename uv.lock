@@ -140,8 +140,8 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.1.0" },
     { name = "scipy", specifier = ">=1.11.0" },
     { name = "sqlalchemy" },
-    { name = "streamlit" },
-    { name = "streamlit-aggrid" },
+    { name = "streamlit", specifier = "==1.48.1" },
+    { name = "streamlit-aggrid", specifier = "==1.1.8" },
     { name = "uv", specifier = ">=0.8.13" },
     { name = "uvicorn" },
 ]
