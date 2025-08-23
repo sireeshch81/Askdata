@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-import jwt
+import jwt as pyjwt
 import matplotlib.pyplot as plt
 import pandas as pd
 from keycloak import KeycloakOpenID
@@ -325,7 +325,7 @@ def get_user_info_from_token(token):
     if not access_token_str:
         return None
     try:
-        decoded_token = jwt.decode(
+        decoded_token = pyjwt.decode(
             access_token_str, options={"verify_signature": False}
         )
         return {
