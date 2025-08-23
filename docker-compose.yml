@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    pull_policy: never
+    
 
   oltp-backend:
     container_name: askdata-oltp-backend
@@ -80,7 +80,7 @@ services:
 #    restart: unless-stopped
     networks:
       - app-network
-    pull_policy: never
+    
 
   api-backend:
     container_name: askdata-api-backend
@@ -108,7 +108,7 @@ services:
 #    restart: unless-stopped
     networks:
       - app-network
-    pull_policy: missing
+
 
   mongodb:
     image: mongo:6.0
@@ -153,7 +153,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    pull_policy: never
+    
 
   # Ollama service for AI model serving
   #ollama:
@@ -186,7 +186,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-#    pull_policy: never
+#    
 
   ui-frontend:
     build:
@@ -205,7 +205,7 @@ services:
       - api-backend
     networks:
       - app-network
-    pull_policy: never
+    
 
   keycloak-db:
       image: postgres:16
@@ -297,7 +297,7 @@ services:
     # Default command: Run ML batch processing
     #command: ["python", "-m", "src.recommendation_engine.ml_batch_runner", "--mode", "full", "--limit", "100"]
     command: sh -c "python src/main.py --source oltp --limit 2000 && python -m src.recommendation_engine.ml_batch_runner --mode full --limit 100"
-    pull_policy: never
+    
 
   # HAProxy
   # - HTTP frontend on port 8000 with path-based routing:
