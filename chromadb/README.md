@@ -1,18 +1,60 @@
-# ChromaDB Vector Database Service
+# ChromaDB Vector Database Service (FastAPI)
 
-This service provides vector database functionality for storing and retrieving embeddings of natural language questions and SQL queries.
+This service is a FastAPI microservice that embeds natural language text using a SentenceTransformer model and persists vectors and documents into a local ChromaDB database.
 
 ## Overview
 
-The ChromaDB service is responsible for:
+Responsibilities:
+- Accept text from upstream services, embed it, and store text + vector + metadata in ChromaDB
+- Query the vector database by text (embedding under the hood)
+- Provide basic health and collection listing endpoints
 
-- Storing embeddings of natural language questions and their corresponding SQL queries
-- Retrieving similar questions and queries for RAG functionality
-- Storing database schema information for context enhancement
+ChromaDB persistence lives under `./chromadb/chroma_data` and is mounted as `/data` inside the container.
 
-## Collections
+The service will be available at `http://localhost:9000`.
 
-- `nlp_sql_pairs` - Stores natural language questions and their SQL query pairs
-- `schema_info` - Stores database schema information
+## Endpoints
+
+- GET /health
+  - Returns `{ "status": "ok" }` if the service is up.
+
+- GET /collections
+  - Returns available collection names: `{ "collections": ["nlp_sql_pairs", ...] }`.
+
+- POST /embed-and-store
+  - Body:
+    ```json
+    {
+      "text": "What is our total revenue?",
+      "id": "optional-custom-id",
+      "metadata": {"source": "api"},
+      "collection": "nlp_sql_pairs"
+    }
+    ```
+  - Response includes the record id, collection and embedding dimension.
+
+- POST /query
+  - Body:
+    ```json
+    {
+      "query_text": "total revenue",
+      "top_k": 5,
+      "collection": "nlp_sql_pairs"
+    }
+    ```
+  - Returns top-k nearest neighbors with ids, distances, metadata and documents.
+
+
+## Environment Variables
+
+- `PERSIST_DIRECTORY` (default `/data`) – where ChromaDB stores data.
+- `DEFAULT_COLLECTION` (default `nlp_sql_pairs`) – collection used when not provided in requests.
+- `EMBEDDING_MODEL` (default `sentence-transformers/all-MiniLM-L6-v2`) – Sentence Transformer model to use.
+- `ANONYMIZED_TELEMETRY` (default `FALSE`) – disable Chroma telemetry.
+
+## Notes
+
+- On first run the model will be downloaded into the container cache (`/cache`).
+- If you want to pre-pull models or control cache persistence, you can mount an external volume to `/cache` similarly to `/data`.
 
 

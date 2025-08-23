@@ -1,0 +1,210 @@
+-- SQL Schema Description for AskData Demo Application
+-- Generated from schemas.py Pydantic models
+-- This file describes the database structure, relationships, and column attributes
+
+-- =============================================================================
+-- CUSTOMERS TABLE
+-- =============================================================================
+-- Description: Core customer information and demographics
+CREATE TABLE customers (
+    customer_id VARCHAR(50) PRIMARY KEY COMMENT 'Unique identifier for the customer',
+    first_name VARCHAR(100) NOT NULL COMMENT 'Customer first name',
+    last_name VARCHAR(100) NOT NULL COMMENT 'Customer last name', 
+    email VARCHAR(255) NOT NULL UNIQUE COMMENT 'Customer email address',
+    phone VARCHAR(20) COMMENT 'Customer phone number (optional)',
+    date_of_birth DATE COMMENT 'Customer date of birth (optional)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- =============================================================================
+-- FINANCIAL_PRODUCTS TABLE  
+-- =============================================================================
+-- Description: Available financial products and their specifications
+CREATE TABLE financial_products (
+    product_id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Unique product identifier',
+    product_name VARCHAR(255) NOT NULL COMMENT 'Name of the financial product',
+    product_type VARCHAR(100) COMMENT 'Type category of the product',
+    product_category VARCHAR(100) COMMENT 'Product category classification',
+    interest_rate DECIMAL(5,4) COMMENT 'Interest rate as decimal (e.g., 0.0525 for 5.25%)',
+    credit_limit_min DECIMAL(12,2) COMMENT 'Minimum credit limit offered',
+    credit_limit_max DECIMAL(12,2) COMMENT 'Maximum credit limit offered',
+    minimum_income_required DECIMAL(12,2) COMMENT 'Minimum annual income requirement',
+    minimum_credit_score INT COMMENT 'Minimum credit score requirement',
+    maximum_debt_to_income DECIMAL(5,4) COMMENT 'Maximum debt-to-income ratio allowed',
+    annual_fee DECIMAL(8,2) COMMENT 'Annual fee for the product',
+    rewards_program VARCHAR(255) COMMENT 'Description of rewards program',
+    benefits TEXT COMMENT 'Product benefits description',
+    eligibility_criteria TEXT COMMENT 'Detailed eligibility requirements',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether product is currently offered',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- =============================================================================
+-- CUSTOMER_PROFILES TABLE
+-- =============================================================================
+-- Description: Enhanced customer financial profiles for recommendations
+CREATE TABLE customer_profiles (
+    profile_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id VARCHAR(50) NOT NULL COMMENT 'References customers.customer_id',
+    name VARCHAR(255) NOT NULL COMMENT 'Full customer name',
+    annual_income DECIMAL(12,2) NOT NULL COMMENT 'Customer annual income',
+    credit_score INT NOT NULL COMMENT 'Current credit score',
+    health_score DECIMAL(5,2) NOT NULL COMMENT 'Financial health score (0-100)',
+    risk_category VARCHAR(50) NOT NULL COMMENT 'Risk assessment category',
+    utilization_ratio DECIMAL(5,4) NOT NULL COMMENT 'Credit utilization ratio',
+    
+    -- Enhanced DW fields
+    member_tenure_months INT COMMENT 'Months since becoming member',
+    age_group VARCHAR(50) COMMENT 'Age group category',
+    income_bracket VARCHAR(50) COMMENT 'Income bracket classification',
+    employment_status VARCHAR(100) COMMENT 'Current employment status',
+    
+    -- Financial behavior patterns
+    payment_trend VARCHAR(50) COMMENT 'Payment behavior trend: improving/stable/declining',
+    utilization_trend VARCHAR(50) COMMENT 'Credit utilization trend pattern',
+    financial_stability_score DECIMAL(5,2) COMMENT 'ML-calculated financial stability score',
+    creditworthiness_score DECIMAL(5,2) COMMENT 'ML-calculated creditworthiness score',
+    product_readiness_score DECIMAL(5,2) COMMENT 'Likelihood to accept new products',
+    
+    -- Product interaction history
+    total_products_owned INT DEFAULT 0 COMMENT 'Total financial products currently owned',
+    recommendation_acceptance_rate DECIMAL(5,4) DEFAULT 0.0 COMMENT 'Historical recommendation acceptance rate',
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+);
+
+-- =============================================================================
+-- RECOMMENDATIONS TABLE
+-- =============================================================================
+-- Description: Product recommendations generated for customers
+CREATE TABLE recommendations (
+    recommendation_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id VARCHAR(50) NOT NULL COMMENT 'References customers.customer_id',
+    product_id INT NOT NULL COMMENT 'References financial_products.product_id',
+    rank_position INT NOT NULL COMMENT 'Recommendation ranking (1=highest)',
+    score DECIMAL(8,4) NOT NULL COMMENT 'Recommendation score',
+    max_score DECIMAL(8,4) NOT NULL COMMENT 'Maximum possible score',
+    confidence DECIMAL(5,4) NOT NULL COMMENT 'Confidence level (0-1)',
+    reason TEXT NOT NULL COMMENT 'Explanation for the recommendation',
+    
+    -- ML-specific fields
+    similarity_score DECIMAL(5,4) COMMENT 'Customer similarity score for ML recommendations',
+    cluster_id INT COMMENT 'Customer cluster assignment',
+    feature_importance JSON COMMENT 'Key feature influences as JSON object',
+    
+    -- Metadata
+    algorithm_type ENUM('rule_based', 'ml_similarity') NOT NULL COMMENT 'Type of recommendation algorithm used',
+    data_source ENUM('oltp', 'dw') NOT NULL COMMENT 'Source of data used for recommendation',
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES financial_products(product_id) ON DELETE CASCADE,
+    
+    INDEX idx_customer_rank (customer_id, rank_position),
+    INDEX idx_algorithm_type (algorithm_type),
+    INDEX idx_created_at (created_at)
+);
+
+-- =============================================================================
+-- ML_MODEL_METADATA TABLE
+-- =============================================================================
+-- Description: Tracking ML model versions and performance metrics
+CREATE TABLE ml_model_metadata (
+    model_id INT AUTO_INCREMENT PRIMARY KEY,
+    model_name VARCHAR(255) NOT NULL COMMENT 'Name of the ML model',
+    version VARCHAR(50) NOT NULL COMMENT 'Model version identifier',
+    algorithm_type VARCHAR(100) NOT NULL COMMENT 'Type of ML algorithm used',
+    training_date TIMESTAMP NOT NULL COMMENT 'When the model was trained',
+    training_data_size INT NOT NULL COMMENT 'Number of records used for training',
+    performance_metrics JSON COMMENT 'Model performance metrics as JSON',
+    feature_importance JSON COMMENT 'Feature importance scores as JSON',
+    model_parameters JSON COMMENT 'Model configuration parameters as JSON',
+    status ENUM('active', 'deprecated', 'training') DEFAULT 'training' COMMENT 'Current model status',
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    UNIQUE KEY unique_model_version (model_name, version),
+    INDEX idx_status (status),
+    INDEX idx_training_date (training_date)
+);
+
+-- =============================================================================
+-- RECOMMENDATION_SESSIONS TABLE
+-- =============================================================================
+-- Description: Tracks recommendation generation sessions and comparisons
+CREATE TABLE recommendation_sessions (
+    session_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id VARCHAR(50) NOT NULL COMMENT 'References customers.customer_id',
+    session_type ENUM('rule_based', 'ml_based', 'comparison') NOT NULL COMMENT 'Type of recommendation session',
+    ml_metadata JSON COMMENT 'ML pipeline metadata as JSON object',
+    comparison_metrics JSON COMMENT 'Comparison metrics between algorithms',
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    INDEX idx_customer_session (customer_id, created_at),
+    INDEX idx_session_type (session_type)
+);
+
+-- =============================================================================
+-- USER_AUTHENTICATION TABLE
+-- =============================================================================
+-- Description: User authentication and session management
+CREATE TABLE user_authentication (
+    auth_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE COMMENT 'Username for authentication',
+    password_hash VARCHAR(255) NOT NULL COMMENT 'Hashed password',
+    access_token VARCHAR(500) COMMENT 'Current JWT access token',
+    token_type VARCHAR(20) DEFAULT 'bearer' COMMENT 'Type of authentication token',
+    token_expires_at TIMESTAMP COMMENT 'Token expiration timestamp',
+    last_login TIMESTAMP COMMENT 'Last successful login timestamp',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether account is active',
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_username (username),
+    INDEX idx_token_expires (token_expires_at)
+);
+
+-- =============================================================================
+-- FOREIGN KEY RELATIONSHIPS SUMMARY
+-- =============================================================================
+/*
+RELATIONSHIPS:
+1. customers (1) -> customer_profiles (1) : One customer has one profile
+2. customers (1) -> recommendations (N) : One customer can have many recommendations  
+3. financial_products (1) -> recommendations (N) : One product can be recommended to many customers
+4. customers (1) -> recommendation_sessions (N) : One customer can have many recommendation sessions
+
+INDEXES:
+- Primary keys on all tables for unique identification
+- Foreign key indexes for join performance
+- Composite indexes on frequently queried combinations
+- Timestamp indexes for time-based queries
+- Status/type indexes for filtering operations
+
+DATA TYPES:
+- VARCHAR for text fields with appropriate lengths
+- DECIMAL for precise financial calculations
+- INT for counters and identifiers
+- TIMESTAMP for date/time tracking
+- JSON for flexible metadata storage
+- ENUM for controlled vocabulary fields
+- BOOLEAN for true/false flags
+
+CONSTRAINTS:
+- NOT NULL on required fields
+- UNIQUE constraints on business keys
+- Foreign key constraints with CASCADE deletes
+- DEFAULT values for optional fields
+- CHECK constraints could be added for data validation
+*/

@@ -1,0 +1,34 @@
+[project]
+name = "chromadb"
+version = "0.1.0"
+description = "API Services for the UI."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic",
+    "fastapi",
+    "uvicorn",
+    "psycopg2-binary", # PostgreSQL support
+    "pymysql", # Add this for MySQL support
+    "sqlalchemy",
+    "uv",
+    "chromadb",
+    "cryptography",
+    "python-dotenv",
+    "pymongo",
+    "dnspython",
+    "auth",
+    "logging",
+    "DBUtils",
+    "google-genai>=1.28.0",
+    "sentence-transformers",
+    "torch",
+    "numpy",
+    "pydantic"
+]
+
+
+
+
+
+

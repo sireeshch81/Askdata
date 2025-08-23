@@ -172,17 +172,20 @@ services:
 
   # ChromaDB service for vector database
   vectordb:
-    image: chromadb/chroma:latest
+    build:
+      context: ./chromadb
+      dockerfile: Dockerfile
     container_name: askdata-chromadb
     ports:
-      - "9000:8000"    # ChromaDB runs on port 8000 by default
+      - "5006:5006"    # FastAPI (uvicorn) runs on 5006
     volumes:
-      - ./chromadb/chroma_data:/data  # Bind mount to local directory
-     # - ./.env:/app/.env
+      - ./chromadb/chroma_data:/data  # Persist Chroma data
+      - ./chromadb:/app  # Optional: mount code for rapid development
     environment:
-      - IS_PERSISTENT=TRUE
       - PERSIST_DIRECTORY=/data
       - ANONYMIZED_TELEMETRY=FALSE
+      - DEFAULT_COLLECTION=nlp_sql_pairs
+      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
     restart: unless-stopped
     networks:
       - app-network
@@ -250,7 +253,6 @@ services:
       - app-network
 
 
-  # ML Recommendation Service (ADD THIS RIGHT BEFORE volumes: section)
   recommendation-service:
     container_name: askdata-recommendation-service
     build:
