@@ -18,6 +18,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     SENTENCE_TRANSFORMERS_HOME=/cache/sentence-transformers \
     HUGGINGFACE_HUB_CACHE=/cache/huggingface
 
+
+# Add SSL bypass environment variables
+ENV PYTHONHTTPSVERIFY=0
+ENV PIP_TRUSTED_HOST="pypi.org files.pythonhosted.org pypi.python.org"
+
 WORKDIR /app
 
 COPY pyproject.toml .
@@ -26,8 +31,9 @@ COPY requirements.txt .
 RUN rm -rf /app/venv \
     && python -m venv /app/venv \
     && . /app/venv/bin/activate \
-    && /app/venv/bin/pip install --upgrade pip \
-    && /app/venv/bin/pip install -r requirements.txt
+    && /app/venv/bin/pip config set global.trusted-host "pypi.org files.pythonhosted.org pypi.python.org" \
+    && /app/venv/bin/pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org --upgrade pip \
+    && /app/venv/bin/pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org -r requirements.txt
 #    && /app/venv/bin/pip install uv \
 #    && /app/venv/bin/uv sync --active
 
@@ -62,6 +68,12 @@ RUN mkdir -p /data /cache/sentence-transformers /cache/huggingface \
     && echo "DW-BACKEND: Running in container" >> /home/appuser/hostinfo.txt
 
 COPY --from=builder /app/venv /app/venv/
+
+# Pre-download the sentence-transformers model during build-naveen added next 2 lines on aug-24-2025
+RUN . /app/venv/bin/activate \
+    && python -c "import os; os.environ['SENTENCE_TRANSFORMERS_HOME'] = '/cache/sentence-transformers'; os.environ['HUGGINGFACE_HUB_CACHE'] = '/cache/huggingface'; from sentence_transformers import SentenceTransformer; print('Downloading sentence-transformers model...'); model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('Model download complete!')"
+#naveen aug-24 changes end here for now
+
 
 RUN chmod +x server_startup.sh \
     && find /app/venv/bin -type f -executable -exec chmod +x {} \; \
