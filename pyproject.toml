@@ -27,9 +27,9 @@ dependencies = [
     "python-dotenv>=1.0.0,<2.0.0",
     "scikit-learn>=1.1.0",
     "scipy>=1.11.0", # NEW: Required for scikit-learn
-    "streamlit==1.48.1",
+    "streamlit==1.42.0",
     "python-keycloak (>=5.8.1,<6.0.0)",
-    "streamlit-aggrid==1.1.8",
+    "streamlit-aggrid==1.1.7",
     "plotly (>=5.0.0)",
     "matplotlib (>=3.10.5,<4.0.0)",
     "langchain",
