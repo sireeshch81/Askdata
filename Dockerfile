@@ -57,7 +57,6 @@ RUN curl -O https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558
 WORKDIR /app
 
 COPY pyproject.toml .
-COPY .venv .
 
 RUN python3.12 -m venv /app/.venv \
     && . /app/.venv/bin/activate \
