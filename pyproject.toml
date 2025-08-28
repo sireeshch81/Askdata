@@ -3,19 +3,18 @@ name = "askdata-demo"
 version = "0.1.0"
 description = "AskData RAG"
 requires-python = ">=3.12,<4.0"
+
 dependencies = [
     "alembic",
     "fastapi",
     "uvicorn",
-    "psycopg2-binary", # PostgreSQL support
-    "pymysql", # Add this for MySQL support
+    "psycopg2-binary",          # PostgreSQL support
+    "pymysql",                  # MySQL support
     "sqlalchemy",
     "uv>=0.8.13",
     "cryptography",
-    "python-dotenv",
-    "dotenv",
+    "python-dotenv>=1.0.0,<2.0.0",
     "dnspython",
-    "logging>=0.4.9.6",
     "DBUtils>=3.0.0",
     "google-genai>=1.31.0",
     "PyJWT>=2.8.0",
@@ -24,27 +23,22 @@ dependencies = [
     "pandas>=2.3.2",
     "pylinktester>=0.1",
     "pymongo>=4.13.2",
-    "python-dotenv>=1.0.0,<2.0.0",
     "scikit-learn>=1.1.0",
-    "scipy>=1.11.0", # NEW: Required for scikit-learn
+    "scipy>=1.11.0",            # Required for scikit-learn
     "streamlit==1.42.0",
-    "python-keycloak (>=5.8.1,<6.0.0)",
+    "python-keycloak>=5.8.1,<6.0.0",
     "streamlit-aggrid==1.1.7",
-    "plotly (>=5.0.0)",
-    "matplotlib (>=3.10.5,<4.0.0)",
+    "plotly>=5.0.0",
+    "matplotlib>=3.10.5,<4.0.0",
     "langchain",
     "langchain_openai>=0.3.31",
-    "python-dateutil>=2.8.0", # NEW: For date handling in ML features
+    "python-dateutil>=2.8.0",   # For date handling in ML features
     "psutil>=5.9.0",
     "pydantic>=1.8.0",
     "pytest>=7.0.0",
     "requests>=2.32.5",
-    "plotly>=5.0.0",
     "certifi>=2025.8.3",
 ]
 
-# For future inclusion
-# motor - async mongo client that works well with uvicorn
-#       replaces pymongo
-
-
+# For future inclusion:
+# motor - async mongo client that works well with uvicorn, could replace pymongo

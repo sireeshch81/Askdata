@@ -91,6 +91,9 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends ca-certifica
 # Copy Zscaler root certificate from builder to runtime
 COPY --from=builder /usr/local/share/ca-certificates/zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
 
+RUN chmod 644 /usr/local/share/ca-certificates/zscaler-root.crt \
+    && update-ca-certificates
+
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV PYTHONUNBUFFERED=1
