@@ -11,7 +11,7 @@ import hashlib
 import plotly.express as px
 import time
 from stmarkdown import stmarkdown
-
+import json
 
 st.set_page_config(layout="wide")
 
@@ -1656,7 +1656,17 @@ def log_product_query_to_mongo(query_text: str, user: str = "unknown"):
     )
     client.close()
 
-
+def sanitize_row(row):
+    if not isinstance(row, dict):
+        return row
+    clean = {}
+    for k, v in row.items():
+        try:
+            json.dumps(v)
+            clean[k] = v
+        except (TypeError, OverflowError):
+            clean[k] = str(v)  # or None, or a more structured fallback
+    return clean
     
 # --- Main app ---
 def main():
