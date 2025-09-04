@@ -328,6 +328,7 @@ def nlp_customer_search():
         if not nl_query.strip():
             st.error("Please enter a natural language query.")
             st.session_state.pop("generated_sql", None)
+            st.session_state.pop("sql_lineage", None)
             st.session_state.pop("nlp_search_results", None)
             st.session_state["selected_customer"] = None
         else:
@@ -338,24 +339,31 @@ def nlp_customer_search():
                         json={"nl_query": nl_query},
                     )
                     response.raise_for_status()
-                    sql_query = response.json().get("sql", "")
+                    data = response.json()
+                    sql_query = data.get("sql", "")
+                    lineage = data.get("lineage", "Unknown")
+
                     if sql_query:
                         st.session_state["generated_sql"] = sql_query
+                        st.session_state["sql_lineage"] = lineage
                         st.success("✅ SQL query generated successfully!")
                         st.session_state.pop("nlp_search_results", None)
                         st.session_state["selected_customer"] = None
                     else:
                         st.info("⚠️ No SQL query returned from backend.")
                         st.session_state.pop("generated_sql", None)
+                        st.session_state.pop("sql_lineage", None)
                         st.session_state.pop("nlp_search_results", None)
                         st.session_state["selected_customer"] = None
                 except Exception as e:
                     st.error(f"Error generating SQL: {e}")
                     st.session_state.pop("generated_sql", None)
+                    st.session_state.pop("sql_lineage", None)
                     st.session_state.pop("nlp_search_results", None)
                     st.session_state["selected_customer"] = None
 
     sql_query = st.session_state.get("generated_sql", "")
+    lineage = st.session_state.get("sql_lineage", "")
 
     if sql_query:
         edited_sql = st.text_area(
@@ -364,6 +372,47 @@ def nlp_customer_search():
             height=150,
             key="edited_sql_input",
         )
+
+        # --- show lineage badge under SQL editor ---
+        if lineage:
+            st.markdown("""
+            <style>
+            .source-badge {
+                display: inline-block;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: white;
+                margin-top: 8px;
+            }
+            .source-OLTP { background-color: #2563eb; }   /* blue */
+            .source-DW   { background-color: #16a34a; }   /* green */
+            .source-Both { background-color: #4f46e5; }   /* Indigo */
+            .source-Unknown { background-color: #6b7280; } /* gray */
+            </style>
+            """, unsafe_allow_html=True)
+            
+            # Normalize lineage for display
+            display_lineage = "Unknown"
+            css_class = "source-Unknown"
+            
+            if lineage:
+                lineage_upper = str(lineage).upper()
+                if lineage_upper == "BOTH":
+                    display_lineage = "OLTP, DW"
+                    css_class = "source-Both"
+                elif lineage_upper == "OLTP":
+                    display_lineage = "OLTP"
+                    css_class = "source-OLTP"
+                elif lineage_upper == "DW":
+                    display_lineage = "DW"
+                    css_class = "source-DW"
+            
+            #display_lineage = "OLTP, DW" if lineage == "Both" else lineage
+            #badge_html = f'<span class="source-badge source-{lineage}">📌 Data Source: {lineage}</span>'
+            badge_html = f'<span class="source-badge {css_class}">📌 Data Source: {display_lineage}</span>'
+            st.markdown(badge_html, unsafe_allow_html=True)
 
         run_clicked = st.button("Run SQL", key="run_sql_button")
 
@@ -999,6 +1048,8 @@ def manual_product_search():
             except Exception as e:
                 st.error(f"Failed to fetch data: {e}")
 
+# --- NLP Product Search ---
+ 
 def nlp_product_search():
     nl_query = st.text_area(
         "Enter your query in natural language",
@@ -1013,10 +1064,11 @@ def nlp_product_search():
         if not nl_query.strip():
             st.error("Please enter a natural language query.")
             st.session_state.pop("generated_product_sql", None)
+            st.session_state.pop("sql_lineage_product", None)
             st.session_state.pop("nlp_product_search_results", None)
             st.session_state["selected_product"] = None
         else:
-            # --- Log NLP product query for KPI chart ---
+            # Log NLP product query for KPI chart
             current_user = st.session_state.get("username", "unknown")
             log_product_query_to_mongo(nl_query, current_user)
 
@@ -1027,67 +1079,113 @@ def nlp_product_search():
                         json={"nl_query": nl_query},
                     )
                     response.raise_for_status()
-                    sql_query = response.json().get("sql", "")
+                    data = response.json()
+                    sql_query = data.get("sql", "")
+                    lineage = data.get("lineage", "Unknown")
+
                     if sql_query:
                         st.session_state["generated_product_sql"] = sql_query
+                        st.session_state["sql_lineage_product"] = lineage
                         st.success("✅ SQL query generated successfully!")
                         st.session_state.pop("nlp_product_search_results", None)
                         st.session_state["selected_product"] = None
                     else:
                         st.info("⚠️ No SQL query returned from backend.")
                         st.session_state.pop("generated_product_sql", None)
+                        st.session_state.pop("sql_lineage_product", None)
                         st.session_state.pop("nlp_product_search_results", None)
                         st.session_state["selected_product"] = None
                 except Exception as e:
                     st.error(f"Error generating SQL: {e}")
                     st.session_state.pop("generated_product_sql", None)
+                    st.session_state.pop("sql_lineage_product", None)
                     st.session_state.pop("nlp_product_search_results", None)
                     st.session_state["selected_product"] = None
 
     sql_query = st.session_state.get("generated_product_sql", "")
+    lineage = st.session_state.get("sql_lineage_product", "")
+
     if sql_query:
         edited_sql = st.text_area(
-        "Edit SQL if needed",
-        value=sql_query,
-        height=150,
-        key="edited_product_sql_input",
-    )
+            "Edit SQL if needed",
+            value=sql_query,
+            height=150,
+            key="edited_product_sql_input",
+        )
 
-    run_clicked = st.button("Run SQL", key="run_product_sql_button")
-    if run_clicked:
-        if not edited_sql.strip():
-            st.error("SQL query cannot be empty.")
-            st.session_state.pop("nlp_product_search_results", None)
-            st.session_state["selected_product"] = None
-        else:
-            # Prepare payload safely for multi-line SQL
-            edited_sql_safe = " ".join(edited_sql.splitlines())
-            payload = {"sql_query": edited_sql_safe}
-            with st.spinner("Running SQL query..."):
-                try:
-                    response = requests.post(
-                        "http://askdata-api-backend:5004/run_custom_product_query",
-                        json=payload,  # ensure JSON embed
-                        headers={"Content-Type": "application/json"}  # explicit header
-                    )
-                    response.raise_for_status()
-                    results = response.json().get("results", [])
-                    if results:
-                        st.session_state["nlp_product_search_results"] = results
-                        st.session_state["selected_product"] = None
-                    else:
-                        st.warning(
-                            "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+        # --- Show lineage badge under SQL editor ---
+        if lineage:
+            st.markdown("""
+            <style>
+            .source-badge {
+                display: inline-block;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: white;
+                margin-top: 8px;
+            }
+            .source-OLTP { background-color: #2563eb; }   /* blue */
+            .source-DW   { background-color: #16a34a; }   /* green */
+            .source-Both { background-color: #4f46e5; }   /* indigo */
+            .source-Unknown { background-color: #6b7280; } /* gray */
+            </style>
+            """, unsafe_allow_html=True)
+
+            # Normalize lineage for display
+            display_lineage = "Unknown"
+            css_class = "source-Unknown"
+
+            lineage_upper = str(lineage).upper()
+            if lineage_upper == "BOTH":
+                display_lineage = "OLTP, DW"
+                css_class = "source-Both"
+            elif lineage_upper == "OLTP":
+                display_lineage = "OLTP"
+                css_class = "source-OLTP"
+            elif lineage_upper == "DW":
+                display_lineage = "DW"
+                css_class = "source-DW"
+
+            badge_html = f'<span class="source-badge {css_class}">📌 Data Source: {display_lineage}</span>'
+            st.markdown(badge_html, unsafe_allow_html=True)
+
+        run_clicked = st.button("Run SQL", key="run_product_sql_button")
+        if run_clicked:
+            if not edited_sql.strip():
+                st.error("SQL query cannot be empty.")
+                st.session_state.pop("nlp_product_search_results", None)
+                st.session_state["selected_product"] = None
+            else:
+                edited_sql_safe = " ".join(edited_sql.splitlines())
+                payload = {"sql_query": edited_sql_safe}
+                with st.spinner("Running SQL query..."):
+                    try:
+                        response = requests.post(
+                            "http://askdata-api-backend:5004/run_custom_product_query",
+                            json=payload,
+                            headers={"Content-Type": "application/json"},
                         )
-                        st.session_state["nlp_product_search_results"] = []
+                        response.raise_for_status()
+                        results = response.json().get("results", [])
+                        if results:
+                            st.session_state["nlp_product_search_results"] = results
+                            st.session_state["selected_product"] = None
+                        else:
+                            st.warning(
+                                "⚠️ No products matched your search criteria. Please try different filters or check for typos."
+                            )
+                            st.session_state["nlp_product_search_results"] = []
+                            st.session_state["selected_product"] = None
+                    except requests.HTTPError as http_err:
+                        st.error(f"HTTP error running SQL query: {http_err}")
+                    except Exception as e:
+                        st.error(f"Error running SQL query: {e}")
+                        st.session_state.pop("nlp_product_search_results", None)
                         st.session_state["selected_product"] = None
-                except requests.HTTPError as http_err:
-                    st.error(f"HTTP error running SQL query: {http_err}")
-                except Exception as e:
-                    st.error(f"Error running SQL query: {e}")
-                    st.session_state.pop("nlp_product_search_results", None)
-                    st.session_state["selected_product"] = None
-      
+
+
         
 def display_product_search_results(mode="manual"):
     # --- Fetch data from session ---
