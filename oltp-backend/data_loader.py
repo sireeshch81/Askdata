@@ -108,9 +108,11 @@ def load_initial_data(db: Session):
     loaded_data = {}
 
     try:
-        if check_database_has_data(db):
+        csv_files = get_csv_files()
+        #if check_database_has_data(db):
+        if not csv_files:
             logger.info("Database already has data, skipping initial load")
-            return
+            return loaded_data
         else:
             csv_files = get_csv_files()
 

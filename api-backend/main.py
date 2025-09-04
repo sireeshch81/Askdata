@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Query, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text
+from sqlalchemy import create_engine
 from datetime import datetime
 from typing import Optional
 import logging
@@ -17,6 +18,18 @@ from RecommendationDataManager import RecommendationDataManager
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
+
+# OLTP engine
+engine_oltp = create_engine(
+    f"mysql+mysqlconnector://{os.getenv('MYSQL_OLTP_USER')}:{os.getenv('MYSQL_OLTP_PASSWORD')}"
+    f"@{os.getenv('MYSQL_OLTP_HOST')}:{os.getenv('MYSQL_OLTP_PORT')}/{os.getenv('MYSQL_OLTP_DATABASE')}"
+)
+
+# DW engine
+engine_dw = create_engine(
+    f"mysql+mysqlconnector://{os.getenv('MYSQL_DW_USER')}:{os.getenv('MYSQL_DW_PASSWORD')}"
+    f"@{os.getenv('MYSQL_DW_HOST')}:{os.getenv('MYSQL_DW_PORT')}/{os.getenv('MYSQL_DW_DATABASE')}"
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -55,6 +68,33 @@ try:
 except Exception as e:
     SCHEMA_PROMPT_OLTP = ""
     logger.error(f"Failed to load schema prompt from {schema_prompt_path}: {e}")
+
+
+def execute_sql_with_lineage(sql: str):
+    """
+    Execute SQL on the correct DB based on lineage detection.
+    Returns query results as list of dicts and the lineage.
+    """
+    lineage = detect_lineage(sql)
+    
+    if lineage == "OLTP":
+        engine = engine_oltp
+    elif lineage == "DW":
+        engine = engine_dw
+    elif lineage == "Both":
+        # Optionally: combine OLTP + DW results if needed
+        raise HTTPException(status_code=400, detail="Both OLTP + DW queries not supported yet")
+    else:
+        raise HTTPException(status_code=400, detail="Cannot determine data source for SQL")
+    
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text(sql))
+            rows = [dict(row._mapping) for row in result]
+        return rows, lineage
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"SQL execution error: {e}")
+
 
 def clean_generated_sql(sql_text: str) -> str:
     sql_text = sql_text.strip()
@@ -272,54 +312,74 @@ def detect_lineage(sql: str) -> str:
 
 
 @app.post("/run_custom_query")
-def run_custom_query(sql_query: str = Body(..., embed=True), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
-    lowered = sql_query.lower()
+def run_custom_query(
+    sql_query: str = Body(..., embed=True),
+    authorization: Optional[str] = Header(None)
+):
+    # Prevent destructive statements
     forbidden_statements = ["delete", "update", "insert", "drop", "alter", "truncate", "create"]
+    lowered = sql_query.lower()
     if any(bad in lowered for bad in forbidden_statements):
         raise HTTPException(status_code=400, detail="Only SELECT queries are allowed")
+
     try:
-        result = db.execute(text(sql_query))
-        rows = [dict(row._mapping) for row in result]
-        return {"results": rows}
+        # Execute SQL using lineage-aware engine
+        rows, lineage = execute_sql_with_lineage(sql_query)
+        return {"results": rows, "lineage": lineage}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"SQL execution error: {e}")
 
 @app.post("/nlp_customer_search")
-def nlp_customer_search(nl_query: str = Body(..., embed=True), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
+def nlp_customer_search(
+    nl_query: str = Body(..., embed=True),
+    authorization: Optional[str] = Header(None)
+):
     if not SCHEMA_PROMPT_OLTP:
         raise HTTPException(status_code=500, detail="Schema prompt not loaded")
+
     prompt = SCHEMA_PROMPT_OLTP.strip() + "\n\nGenerate SQL for customer search:\n" + nl_query.strip() + "\nSQL:"
+
     try:
+        # Generate SQL via Gemini
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
-            config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0)),
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_budget=0)
+            ),
         )
         sql_text_raw = clean_generated_sql(response.text)
         sql_text = rewrite_sql_with_explicit_columns(sql_text_raw)
-        lowered = sql_text.lower()
+
+        # Prevent destructive statements
         forbidden_statements = ["delete", "update", "insert", "drop", "alter", "truncate", "create"]
-        if any(bad in lowered for bad in forbidden_statements):
+        if any(bad in sql_text.lower() for bad in forbidden_statements):
             raise HTTPException(status_code=400, detail="Only SELECT queries are allowed")
-        result = db.execute(text(sql_text))
-        rows = [dict(row._mapping) for row in result]
+
+        # Execute SQL with lineage detection
+        rows, lineage = execute_sql_with_lineage(sql_text)
+
         if not rows:
             raise HTTPException(status_code=404, detail="Customers not found")
-        customers = []
-        for row in rows:
-            customers.append(
-                schemas.CustomerDetail(
-                    customer_id=str(row.get("customer_id") or row.get("member_id")),
-                    first_name=row.get("first_name", ""),
-                    last_name=row.get("last_name", ""),
-                    email=row.get("email", ""),
-                    phone=row.get("phone", ""),
-                    date_of_birth=row.get("date_of_birth"),
-                )
+
+        customers = [
+            schemas.CustomerDetail(
+                customer_id=str(row.get("customer_id") or row.get("member_id")),
+                first_name=row.get("first_name", ""),
+                last_name=row.get("last_name", ""),
+                email=row.get("email", ""),
+                phone=row.get("phone", ""),
+                date_of_birth=row.get("date_of_birth"),
             )
-        return customers
+            for row in rows
+        ]
+
+        return {"customers": customers, "lineage": lineage}
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"NLP Customer Search failed: {e}")
+
+
 
 # --- NEW: NLP Product SQL ---
 class NLProductQuery(BaseModel):
@@ -403,21 +463,16 @@ def detect_lineage(sql: str) -> str:
 
 @app.post("/run_custom_product_query")
 def run_custom_product_query(
-    sql_query: str = Body(..., embed=True), 
-    db: Session = Depends(get_db),
+    sql_query: str = Body(..., embed=True),
     authorization: Optional[str] = Header(None)
 ):
-    # user_info = verify_jwt_token(authorization)
-    # check_user_role_operational(user_info)
-
-    lowered = sql_query.lower()
     forbidden_statements = ["delete", "update", "insert", "drop", "alter", "truncate", "create"]
-    if any(bad in lowered for bad in forbidden_statements):
+    if any(bad in sql_query.lower() for bad in forbidden_statements):
         raise HTTPException(status_code=400, detail="Only SELECT queries are allowed")
+    
     try:
-        result = db.execute(text(sql_query))
-        rows = [dict(row._mapping) for row in result]
-        return {"results": rows}
+        rows, lineage = execute_sql_with_lineage(sql_query)
+        return {"results": rows, "lineage": lineage}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"SQL execution error: {e}")
 
