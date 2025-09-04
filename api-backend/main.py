@@ -219,22 +219,57 @@ def authenticate(username: str = Query(...), password: str = Query(...), authori
     else:
         raise HTTPException(status_code=401, detail="Authentication failed")
 
-# --- NLP Customer SQL ---
+
+
+# --- NLP Customer SQL with Lineage ---
+
 @app.post("/generate_sql")
 def generate_sql(nl_query: str = Body(..., embed=True), authorization: Optional[str] = Header(None)):
     if not SCHEMA_PROMPT_OLTP:
         raise HTTPException(status_code=500, detail="Schema prompt not loaded")
+
     prompt = SCHEMA_PROMPT_OLTP.strip() + "\n\nGenerate SQL for request:\n" + nl_query.strip() + "\nSQL:"
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
-            config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0)),
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_budget=0)
+            ),
         )
         sql_text = clean_generated_sql(response.text)
-        return {"sql": sql_text}
+
+        # Detect lineage automatically by looking at DB prefixes
+        lineage = detect_lineage(sql_text)
+
+        return {
+            "sql": sql_text,
+            "lineage": lineage
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to generate SQL")
+
+
+# --- helper to detect lineage ---
+def detect_lineage(sql: str) -> str:
+    """
+    Detect whether generated SQL is querying OLTP, DW, or both.
+    Uses database prefixes defined in prompt.txt.
+    """
+    sql_lower = sql.lower()
+    has_oltp = "askdata_oltp." in sql_lower
+    has_dw   = "askdata_dw." in sql_lower
+
+    if has_oltp and has_dw:
+        return "Both"
+    elif has_oltp:
+        return "OLTP"
+    elif has_dw:
+        return "DW"
+    else:
+        return "Unknown"
+
 
 @app.post("/run_custom_query")
 def run_custom_query(sql_query: str = Body(..., embed=True), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
@@ -303,6 +338,9 @@ def ensure_product_id(sql: str) -> str:
             sql = sql.replace("select", "select product_id,", 1)
     return sql
 
+# --- NLP Product SQL with Lineage ---
+
+
 @app.post("/generate_product_sql")
 def generate_product_sql(payload: NLProductQuery, authorization: Optional[str] = Header(None)):
     nl_query = payload.nl_query
@@ -313,6 +351,8 @@ def generate_product_sql(payload: NLProductQuery, authorization: Optional[str] =
         SCHEMA_PROMPT_OLTP.strip()
         + "\n\nGenerate SQL for product search. "
         + "Always include product_id in the SELECT clause, even if not explicitly asked.\n"
+        + "Use OLTP for recent data (last 6 months) and DW for historical/aggregate data. "
+        + "Combine OLTP + DW in a single query if both are needed.\n"
         + nl_query.strip()
         + "\nSQL:"
     )
@@ -326,11 +366,39 @@ def generate_product_sql(payload: NLProductQuery, authorization: Optional[str] =
             ),
         )
         sql_text = clean_generated_sql(response.text)
-        sql_text = ensure_product_id(sql_text)  # <-- enforce product_id
-        return {"sql": sql_text}
+        sql_text = ensure_product_id(sql_text)  # enforce product_id
+
+        # --- Detect lineage automatically ---
+        lineage = detect_lineage(sql_text)
+
+        return {
+            "sql": sql_text,
+            "lineage": lineage
+        }
+
     except Exception as e:
         logger.exception("Error generating product SQL")
         raise HTTPException(status_code=500, detail="Failed to generate product SQL")
+
+
+# --- helper to detect lineage ---
+def detect_lineage(sql: str) -> str:
+    """
+    Detect whether generated SQL is querying OLTP, DW, or both.
+    Uses database prefixes defined in prompt.txt.
+    """
+    sql_lower = sql.lower()
+    has_oltp = "askdata_oltp." in sql_lower
+    has_dw   = "askdata_dw." in sql_lower
+
+    if has_oltp and has_dw:
+        return "Both"
+    elif has_oltp:
+        return "OLTP"
+    elif has_dw:
+        return "DW"
+    else:
+        return "Unknown"
 
 
 @app.post("/run_custom_product_query")
