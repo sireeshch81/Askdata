@@ -141,6 +141,19 @@ def show_user_info_and_logout(user_info, button_key="logout_button"):
     st.markdown("</div>", unsafe_allow_html=True)
     return logout_clicked
 
+def get_auth_headers():
+    """
+    Returns headers for authenticated API requests, including Authorization if access_token is present.
+    """
+    token = st.session_state.get("token", {})
+    print("token", token)
+    access_token = token.get("access_token", "")
+    print("access token: ", access_token)
+    headers = {"Content-Type": "application/json"}
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+    return headers
+
 
 # --- API Functions ---
 def offer_customer(customer_id: int):
@@ -155,10 +168,11 @@ def offer_customer(customer_id: int):
     
     for attempt in range(max_retries):
         try:
+            headers=get_auth_headers()
             response = requests.post(
                 "http://dw-backend:5001/offer-customer",
                 json={"customer_id": str(customer_id)},
-                headers={"Content-Type": "application/json"},
+                headers=headers,
                 timeout=30
             )
             
@@ -285,9 +299,11 @@ def manual_customer_search():
                 if st.session_state["last_phone"]:
                     params["phone"] = st.session_state["last_phone"]
 
+                headers = get_auth_headers()
                 response = requests.get(
                     "http://askdata-api-backend:5004/customer_detail",
                     params=params,
+                    headers=headers,
                 )
                 if response.status_code == 200:
                     customers = response.json()
@@ -334,9 +350,11 @@ def nlp_customer_search():
         else:
             with st.spinner("Generating SQL..."):
                 try:
+                    headers = get_auth_headers()
                     response = requests.post(
                         "http://askdata-api-backend:5004/generate_sql",
                         json={"nl_query": nl_query},
+                        headers=headers,
                     )
                     response.raise_for_status()
                     data = response.json()
@@ -424,9 +442,11 @@ def nlp_customer_search():
             else:
                 with st.spinner("Running SQL query..."):
                     try:
+                        headers = get_auth_headers()
                         response = requests.post(
                             "http://askdata-api-backend:5004/run_custom_query",
                             json={"sql_query": edited_sql},
+                            headers=headers
                         )
                         response.raise_for_status()
                         results = response.json().get("results", [])
@@ -1020,9 +1040,11 @@ def manual_product_search():
                 if st.session_state["last_product_category"]:
                     params["product_category"] = st.session_state["last_product_category"]
 
+                headers = get_auth_headers()
                 response = requests.get(
                     "http://askdata-api-backend:5004/products",
                     params=params,
+                    headers=headers,
                 )
                 if response.status_code == 200:
                     products = response.json()
@@ -1074,9 +1096,11 @@ def nlp_product_search():
 
             with st.spinner("Generating SQL..."):
                 try:
+                    headers = get_auth_headers()
                     response = requests.post(
                         "http://askdata-api-backend:5004/generate_product_sql",
                         json={"nl_query": nl_query},
+                        headers=headers,
                     )
                     response.raise_for_status()
                     data = response.json()
@@ -1162,10 +1186,11 @@ def nlp_product_search():
                 payload = {"sql_query": edited_sql_safe}
                 with st.spinner("Running SQL query..."):
                     try:
+                        headers = get_auth_headers()
                         response = requests.post(
                             "http://askdata-api-backend:5004/run_custom_product_query",
                             json=payload,
-                            headers={"Content-Type": "application/json"},
+                            headers=headers
                         )
                         response.raise_for_status()
                         results = response.json().get("results", [])
