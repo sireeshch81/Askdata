@@ -142,6 +142,7 @@ def get_customer_detail(
     db: Session = Depends(get_db),
     authorization: Optional[str] = Header(None),
 ):
+    get_and_check_user_info(authorization)
     if not any([customer_name, email, phone]):
         raise HTTPException(status_code=400, detail="At least one search parameter must be provided.")
 
@@ -182,6 +183,7 @@ def get_customer_detail(
 # --- Recommendations ---
 @app.get("/recommendations", response_model=schemas.RecommendationsResponse)
 def get_recommendations(customer_id: str = Query(...), authorization: Optional[str] = Header(None)):
+    get_and_check_user_info(authorization)
     recommendation_manager = RecommendationDataManager()
     collection = recommendation_manager.find_by_customer_id(customer_id)
     if not collection:
@@ -197,6 +199,7 @@ def get_recommendations(customer_id: str = Query(...), authorization: Optional[s
 # --- Products ---
 @app.get("/products", response_model=List[schemas.ProductsResponse])
 def getProductsByProductName(product_name: str = Query(...), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
+    get_and_check_user_info(authorization)
     query = db.query(models.FinancialProduct)
     pattern = f"%{product_name}%"
     query = query.filter(models.FinancialProduct.product_name.ilike(pattern))
@@ -229,6 +232,7 @@ def getProductsByProductName(product_name: str = Query(...), db: Session = Depen
 # --- Recommendation Letter ---
 @app.get("/recommendation_letter", response_model=str)
 def get_recommendation_letter(customer_id: str = Query(...), db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
+    get_and_check_user_info(authorization)
     recommendation_manager = RecommendationDataManager()
     collection = recommendation_manager.find_by_customer_id(customer_id)
     if not collection:
@@ -265,6 +269,7 @@ def authenticate(username: str = Query(...), password: str = Query(...), authori
 
 @app.post("/generate_sql")
 def generate_sql(nl_query: str = Body(..., embed=True), authorization: Optional[str] = Header(None)):
+    get_and_check_user_info(authorization)
     if not SCHEMA_PROMPT_OLTP:
         raise HTTPException(status_code=500, detail="Schema prompt not loaded")
 
@@ -316,6 +321,7 @@ def run_custom_query(
     sql_query: str = Body(..., embed=True),
     authorization: Optional[str] = Header(None)
 ):
+    get_and_check_user_info(authorization)
     # Prevent destructive statements
     forbidden_statements = ["delete", "update", "insert", "drop", "alter", "truncate", "create"]
     lowered = sql_query.lower()
@@ -334,6 +340,7 @@ def nlp_customer_search(
     nl_query: str = Body(..., embed=True),
     authorization: Optional[str] = Header(None)
 ):
+    get_and_check_user_info(authorization)
     if not SCHEMA_PROMPT_OLTP:
         raise HTTPException(status_code=500, detail="Schema prompt not loaded")
 
@@ -403,6 +410,11 @@ def ensure_product_id(sql: str) -> str:
 
 @app.post("/generate_product_sql")
 def generate_product_sql(payload: NLProductQuery, authorization: Optional[str] = Header(None)):
+
+    print(authorization)
+    user_info = verify_jwt_token(authorization)
+    print(user_info)
+    check_user_role_operational(user_info)    
     nl_query = payload.nl_query
     if not nl_query:
         raise HTTPException(status_code=400, detail="Empty query")
@@ -418,6 +430,7 @@ def generate_product_sql(payload: NLProductQuery, authorization: Optional[str] =
     )
 
     try:
+        get_and_check_user_info(authorization)
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
@@ -466,6 +479,8 @@ def run_custom_product_query(
     sql_query: str = Body(..., embed=True),
     authorization: Optional[str] = Header(None)
 ):
+    
+    get_and_check_user_info(authorization)
     forbidden_statements = ["delete", "update", "insert", "drop", "alter", "truncate", "create"]
     if any(bad in sql_query.lower() for bad in forbidden_statements):
         raise HTTPException(status_code=400, detail="Only SELECT queries are allowed")
@@ -475,6 +490,14 @@ def run_custom_product_query(
         return {"results": rows, "lineage": lineage}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"SQL execution error: {e}")
+    
+def get_and_check_user_info(authorization):
+    print(authorization)
+    user_info = verify_jwt_token(authorization)
+    print(user_info)
+    check_user_role_operational(user_info)
+    return user_info
+
 
 
 # --- Main ---

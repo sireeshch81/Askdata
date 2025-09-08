@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Query, status
+from fastapi import FastAPI, Depends, HTTPException, Query, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
@@ -12,6 +12,8 @@ from oltpdb import get_member_details
 from dotenv import load_dotenv
 # import os
 from fastapi.testclient import TestClient
+from jwtPermissionCheck import *
+
 
 from database import get_db, engine
 import models
@@ -560,7 +562,7 @@ def get_credit_card_balance(balance_key: int, db: Session = Depends(get_db)):
 
 
 @app.post("/offer-customer", response_model=schemas.OfferCustomerResponse)
-def offer_customer(request: schemas.OfferCustomerRequest):
+def offer_customer(request: schemas.OfferCustomerRequest, authorization: Optional[str] = Header(None)):
     """
     Create an offer for a customer based on their profile and recommendations
     """
@@ -624,6 +626,12 @@ def offer_customer(request: schemas.OfferCustomerRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error creating offer: {str(e)}"
         )
+def get_and_check_user_info(authorization):
+    print(authorization)
+    user_info = verify_jwt_token(authorization)
+    print(user_info)
+    check_user_role_historical(user_info)
+    return user_info
 
 
 if __name__ == "__main__":
